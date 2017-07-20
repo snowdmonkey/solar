@@ -1,0 +1,1 @@
+This repository hosts the code for a PoC of solar panel failure detection.
