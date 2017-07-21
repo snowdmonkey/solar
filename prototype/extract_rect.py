@@ -56,7 +56,7 @@ class PlateCropper:
         _, contours, h = cv2.findContours(self.binary_seg, 1, 2)
         self.contours = [x for x in contours if cv2.contourArea(x) >= min_area]
 
-    def get_sub_imgs(self, rotation_n_crop=False):
+    def get_sub_imgs(self, rotate_n_crop=False):
         if self.binary_seg is None:
             self.get_binary_seg()
         if self.contours is None:
@@ -64,7 +64,7 @@ class PlateCropper:
         sub_imgs = list()
         for cnt in self.contours:
             masked_image = get_masked_image(self.raw_img, [cnt])
-            if rotation_n_crop:
+            if rotate_n_crop:
                 corp_img = crop_and_rotate(masked_image, cnt)
                 sub_imgs.append(corp_img)
             else:
@@ -83,7 +83,7 @@ class PlateCropper:
 
 def main():
     plate_cropper = PlateCropper("../pic/DJI_0001.jpg")
-    sub_imgs = plate_cropper.get_sub_imgs(rotation_n_crop=True)
+    sub_imgs = plate_cropper.get_sub_imgs(rotate_n_crop=True)
     n = len(sub_imgs)
     n_row = n // 3 + 1
     n_col = 3
