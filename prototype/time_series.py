@@ -1,8 +1,8 @@
 from os import listdir
-from os.path import isfile, join, sep
+from os.path import basename, isfile, join
 import sys
 import time
-import urllib
+import urllib.parse
 
 from influxdb import InfluxDBClient
 
@@ -10,7 +10,7 @@ global client
 
 
 def get_device_id(image_path):
-    return file(image_path).name.split(sep)[-1][:-4]
+    return basename(image_path)[:-4]
 
 
 def load_images(image_folder):
@@ -28,7 +28,7 @@ def make_point(device_id, image_path, tags=None, ts=None):
         "points": [{
             "time": time.strftime('%Y-%m-%dT%H:%M:%SZ') if ts is None else ts,
             "fields": {
-                "path": urllib.quote_plus(image_path)
+                "path": urllib.parse.quote_plus(image_path)
             },
             "tags": {} if tags is None else tags
         }]
@@ -66,7 +66,7 @@ def get_series_by_tag(tags, field=None, start=None, end=None):
 
     rs = client.query(sql, params={'pretty': 'true'}, database=client._database)
     for p in rs.get_points():
-        print(urllib.unquote_plus(p.get('path')))
+        print(urllib.parse.unquote_plus(p.get('path')))
 
 
 def _get_tags_clause(tags):
@@ -83,7 +83,7 @@ def get_series_by_time(start=None, end=None):
     sql = "select * from /sn/ where %s;" % sql
     rs = client.query(sql, params={'pretty': 'true'}, database=client._database)
     for p in rs.get_points():
-        print(urllib.unquote_plus(p.get('path')))
+        print(urllib.parse.unquote_plus(p.get('path')))
 
 
 def _get_time_clause(start, end):
@@ -112,7 +112,7 @@ def update():
                           database=client._database)
     for p in result.get_points():
         if p.get('status') == '' or p.get('status') is None:
-            print(urllib.unquote_plus(p.get('path')))
+            print(urllib.parse.unquote_plus(p.get('path')))
             # client.write(make_point('sn004', urllib.unquote_plus(p.get('path')), {'status': 'nice'}, p.get('time')), params={'precision': 'm', 'db': client._database},
             #              protocol='json')
 
@@ -130,7 +130,7 @@ def clean():
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:
-        print('Usage: python time_series.py [init|update|clean] db_host db_name')
+        print('Usage: python time_series.py [init|update|query|clean] db_host db_name')
         exit(0)
 
     cmd = sys.argv[1]

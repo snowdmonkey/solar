@@ -1,0 +1,2 @@
+exifread==2.1.2
+influxdb==4.1.1
