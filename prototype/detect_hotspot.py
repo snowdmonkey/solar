@@ -1,5 +1,4 @@
-from extract_rect import PlateCropper
-import cv2
+from extract_rect import PanelCropper
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -55,8 +54,8 @@ class HotSpotDetector:
 
 
 def main():
-    plate_cropper = PlateCropper("../pic/DJI_0001.jpg")
-    sub_imgs = plate_cropper.get_sub_imgs(rotate_n_crop=True)
+    panel_cropper = PanelCropper("../pic/DJI_0001.jpg")
+    sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=True)
     n = len(sub_imgs)
     n_row = n // 3 + 1
     n_col = 3

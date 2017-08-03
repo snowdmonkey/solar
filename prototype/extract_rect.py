@@ -8,7 +8,7 @@ def crop_and_rotate(img, cnt):
     rect = cv2.minAreaRect(cnt)
     dst = rotate_and_scale(masked_image, rect[2])
     ii = np.where(dst != 0)
-    corp_img = dst[min(ii[0]): max(ii[0]), min(ii[1]): max(ii[1])]
+    corp_img = dst[min(ii[0]): (max(ii[0])+1), min(ii[1]): (max(ii[1])+1)]
     return corp_img
 
 
@@ -41,10 +41,11 @@ def rotate_and_scale(img, degree, scale_factor=1.0):
     return rotated_img
 
 
-class PlateCropper:
+class PanelCropper:
 
     def __init__(self, pic_path):
         self.raw_img = cv2.imread(pic_path, 0)
+        # self.raw_img = cv2.blur(self.raw_img, (3, 3))
         self.binary_seg = None
         self.contours = None
 
@@ -82,7 +83,7 @@ class PlateCropper:
 
 
 def main():
-    plate_cropper = PlateCropper("../pic/DJI_0001.jpg")
+    plate_cropper = PanelCropper("../pic/DJI_0001.jpg")
     sub_imgs = plate_cropper.get_sub_imgs(rotate_n_crop=True)
     n = len(sub_imgs)
     n_row = n // 3 + 1
