@@ -65,9 +65,9 @@ def main():
                    [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
 
     geo_mapper = GeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-    print(geo_mapper.gps2pixel(33.59034075, 119.6334535))
-    print(geo_mapper.pixel2gps(1358, 1328))
-    print(geo_mapper.pixel2gps(1358, 1329))
+    # print(geo_mapper.gps2pixel(33.59034075, 119.6334535))
+    print(geo_mapper.pixel2gps(0, 0))
+    print(geo_mapper.pixel2gps(2715, 2655))
 
 
 if __name__ == "__main__":

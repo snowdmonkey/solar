@@ -7,6 +7,7 @@
     <!-- 引入 Bootstrap -->
     <link href="../css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/jquery.hotspot.css">
+    <link rel="stylesheet" href="../css/leaflet.css">
     <!--<script type="text/javascript" src="../js/jquery.min.js"></script>-->
     <!--<script src="https://code.jquery.com/jquery.js"></script>-->
 
@@ -14,8 +15,12 @@
     <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="../js/modernizr.custom.49511.js"></script>
     <script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>
+    <script type="text/javascript" src="../js/wheelzoom.js"></script>
+    <script type="text/javascript" src="../js/leaflet.js"></script>
+    <script type="text/javascript" src="../js/leaflet.ChineseTmsProviders.js"></script>
     <script type="text/javascript">
-        $(document).ready(function ($) {
+        $(document).ready(function () {
+            wheelzoom(document.getElementById("image2"));
             var popup = $('#layout_container').hotSpot({
                 slideshow: false,
                 triggerBy: 'click',
@@ -24,6 +29,13 @@
             $('#image2').on('click', function () {
                 popup.hideCurrentPop();
             });
+
+            var mymap = L.map("map").setView([33.58873250, 119.6334535], 18);
+            L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 19, minZoom: 5}).addTo(mymap);
+            L.imageOverlay("../../map/panorama.png",
+              [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]).addTo(mymap);
+            L.marker([33.5867763, 119.635652]).addTo(mymap)
+              .bindPopup("<img src=\"../img/DJI_0104.jpg\" alt=\"small\" width=\"600\"/>");
 
         });
     </script>
@@ -126,42 +138,49 @@
     </div>
     <div class="row clearfix">
         <div class="col-md-8 column" id="layout_container">
-            <div class="popover right pop1" data-easein="cardInRight" data-easeout="cardOutRight" id="pop1">
-                <div class="arrow"></div>
-                <div class="popover-inner">
-                    <h3 class="popover-title">面板详情</h3>
-                    <div class="popover-content">
-                        <p>面板标号#0020122</p>
-                        <img src="../img/DJI_0104.jpg" alt="small" width="600"/>
-                    </div>
-                </div>
-            </div>
-            <div class="popover top pop2" data-easein="cardInTop" data-easeout="cardOutTop" id="pop2">
-                <div class="arrow"></div>
-                <div class="popover-inner">
-                    <h3 class="popover-title">面板详情</h3>
-                    <div class="popover-content">
-                        <p>面板标号#0070692</p>
-                        <img src="../img/DJI_0107.jpg" alt="small" width="600"/>
-                    </div>
-                </div>
-            </div>
-            <div class="popover left pop3" data-easein="cardInLeft" data-easeout="cardOutLeft" id="pop3">
-                <div class="arrow"></div>
-                <div class="popover-inner">
-                    <h3 class="popover-title">面板详情</h3>
-                    <div class="popover-content">
-                        <p>面板标号#0030661</p>
-                        <img src="../img/DJI_0119.jpg" alt="small" width="600"/>
-                    </div>
-                </div>
-            </div>
-            <!--<div class="jumbotron">-->
-            <img src="../img/arrow1.png" alt="info" class="info-icon info-icon1" data-target="pop1"/>
-            <img src="../img/arrow1.png" alt="info" class="info-icon info-icon2" data-target="pop2"/>
-            <img src="../img/arrow1.png" alt="info" class="info-icon info-icon3" data-target="pop3"/>
+            <!--<div class="popover right pop1" data-easein="cardInRight" data-easeout="cardOutRight" id="pop1">-->
+                <!--<div class="arrow"></div>-->
+                <!--<div class="popover-inner">-->
+                    <!--<h3 class="popover-title">面板详情</h3>-->
+                    <!--<div class="popover-content">-->
+                        <!--<p>面板标号#0020122</p>-->
+                        <!--<img src="../img/DJI_0104.jpg" alt="small" width="600"/>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+            <!--<div class="popover top pop2" data-easein="cardInTop" data-easeout="cardOutTop" id="pop2">-->
+                <!--<div class="arrow"></div>-->
+                <!--<div class="popover-inner">-->
+                    <!--<h3 class="popover-title">面板详情</h3>-->
+                    <!--<div class="popover-content">-->
+                        <!--<p>面板标号#0070692</p>-->
+                        <!--<img src="../img/DJI_0107.jpg" alt="small" width="600"/>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+            <!--<div class="popover left pop3" data-easein="cardInLeft" data-easeout="cardOutLeft" id="pop3">-->
+                <!--<div class="arrow"></div>-->
+                <!--<div class="popover-inner">-->
+                    <!--<h3 class="popover-title">面板详情</h3>-->
+                    <!--<div class="popover-content">-->
+                        <!--<p>面板标号#0030661</p>-->
+                        <!--<img src="../img/DJI_0119.jpg" alt="small" width="600"/>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+            <!--&lt;!&ndash;<div class="jumbotron">&ndash;&gt;-->
+            <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon1" data-target="pop1"/>-->
+            <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon2" data-target="pop2"/>-->
+            <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon3" data-target="pop3"/>-->
 
-            <img class="jumbotron" src="../img/layout.png" width="100%" id="image2">
+            <!--<img class="jumbotron" src="../../map/panorama.png" width="100%" id="image2" usemap="#farmmap">-->
+
+            <!--<map name="farmmap">-->
+                <!--<area shape="circle" coords="300,300,10" onclick="alert('oops')" href="#"/>-->
+            <!--</map>-->
+
+            <div id="map" style="height: 600px;"></div>
+
             <!--</div>-->
         </div>
         <div class="col-md-4 column">
