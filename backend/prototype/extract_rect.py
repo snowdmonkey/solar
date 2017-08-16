@@ -49,19 +49,20 @@ class PanelCropper:
         self.binary_seg = None
         self.contours = None
 
-    def get_binary_seg(self):
+    def _cal_binary_seg(self):
         _, th = cv2.threshold(self.raw_img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
         self.binary_seg = th
 
-    def get_contours(self, min_area=500):
-        _, contours, h = cv2.findContours(self.binary_seg, 1, 2)
+    def _cal_contours(self, min_area=500):
+        _, contours, h = cv2.findContours(self.binary_seg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.contours = [x for x in contours if cv2.contourArea(x) >= min_area]
 
-    def get_sub_imgs(self, rotate_n_crop=False):
+    def get_sub_imgs(self, rotate_n_crop=False, min_area=500):
         if self.binary_seg is None:
-            self.get_binary_seg()
-        if self.contours is None:
-            self.get_contours()
+            self._cal_binary_seg()
+        # if self.contours is None:
+        #     self.get_contours()
+        self._cal_contours(min_area=min_area)
         sub_imgs = list()
         for cnt in self.contours:
             masked_image = get_masked_image(self.raw_img, [cnt])
@@ -72,11 +73,12 @@ class PanelCropper:
                 sub_imgs.append(masked_image)
         return sub_imgs
 
-    def get_plate_part(self):
+    def get_plate_part(self, min_area=500):
         if self.binary_seg is None:
-            self.get_binary_seg()
-        if self.contours is None:
-            self.get_contours()
+            self._cal_binary_seg()
+        # if self.contours is None:
+        #     self.get_contours()
+        self._cal_contours(min_area=min_area)
 
         masked_image = get_masked_image(self.raw_img, self.contours)
         return masked_image
