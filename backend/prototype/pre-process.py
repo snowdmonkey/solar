@@ -48,7 +48,7 @@ def batch_process_exif(folder_path, outfile_path=None):
     file_names = [x for x in listdir(folder_path) if x.endswith(".jpg")]
     exif = dict()
     for file_name in file_names:
-        command = 'exiftool.exe -j -c "%+.10f" '
+        command = 'exiftool -j -c "%+.10f" '
         file_path = join(folder_path, file_name)
         proc = subprocess.run(command + file_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         out = proc.stdout
