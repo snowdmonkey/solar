@@ -57,12 +57,29 @@ class PanelCropper:
         _, contours, h = cv2.findContours(self.binary_seg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.contours = [x for x in contours if cv2.contourArea(x) >= min_area]
 
-    def get_sub_imgs(self, rotate_n_crop=False, min_area=500):
+    def _verify_rectangle(self, poly_threshold=10, n_vertices_threshold=6):
+        """
+        The function aims to verify whether the selected sub images are rectangle. It approximate the contours to
+        polygons and count the number of vertices. If the number if vertices are more a specified threshold, the
+        selected part is not considered as a rectangle
+        :param poly_threshold: the threshold when apply cv2.approxPolyDP
+        :param n_vertices_threshold: threshold for the number of vertices
+        :return: nothing
+        """
+        approx = [cv2.approxPolyDP(cnt, poly_threshold, True) for cnt in self.contours]
+        n_vertices = [len(x) for x in approx]
+        self.contours = [self.contours[i] for i in range(len(self.contours)) if n_vertices[i] <= n_vertices_threshold]
+
+    def get_sub_imgs(self, rotate_n_crop=False, min_area=500, verify_rectangle=-1, n_vertices_threshold=6):
         if self.binary_seg is None:
             self._cal_binary_seg()
         # if self.contours is None:
         #     self.get_contours()
         self._cal_contours(min_area=min_area)
+
+        if verify_rectangle >= 0:
+            self._verify_rectangle(verify_rectangle, n_vertices_threshold)
+
         sub_imgs = list()
         for cnt in self.contours:
             masked_image = get_masked_image(self.raw_img, [cnt])
