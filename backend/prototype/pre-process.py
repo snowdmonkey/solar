@@ -1,11 +1,13 @@
 from os import listdir
 from os.path import isfile, join
-from extract_rect import rotate_and_scale
+from extract_rect import rotate_and_scale, PanelCropper
+from detect_hotspot import HotSpotDetector
 import os
 import subprocess
 import exifread
 import json
 import cv2
+import numpy as np
 
 
 def convert_gps(gps_info):
@@ -104,6 +106,54 @@ def batch_process_rotation(folder_path, exif_path=None):
             cv2.imwrite(rotated_img_path, rotated_img)
 
 
+def batch_process_label(folder_path):
+    """
+    process the images under the rotated sub-directory of folder_path, label the defects with red rectangle
+    :param folder_path: folder for the raw images
+    :return: nothing
+    """
+    rotate_folder_path = join(folder_path, "rotated")
+    label_folder_path = join(folder_path, "labeled")
+    if not os.path.exists(label_folder_path):
+        os.mkdir(label_folder_path)
+    file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
+    for file_name in file_names:
+        file_path = join(rotate_folder_path, file_name)
+        panel_cropper = PanelCropper(file_path)
+        sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000,
+                                              verify_rectangle=10, n_vertices_threshold=8)
+        if len(sub_imgs) == 0:
+            continue
+
+        else:
+            points = list()
+            for img in sub_imgs:
+                hot_spot_detector = HotSpotDetector(img, 3.0)
+                hot_spot = hot_spot_detector.get_hot_spot()
+                points.extend(hot_spot.points)
+
+            mask = np.zeros_like(panel_cropper.raw_img)
+            for point in points:
+                mask[tuple(point)] = 255
+
+            _, contours, h = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 2]
+
+            if len(contours) == 0:
+                continue
+            raw_image = cv2.imread(file_path, cv2.IMREAD_COLOR)
+            rectangles = list()
+            for cnt in contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                if h < 2*w:
+                    rectangles.append((x, y, w, h))
+            if len(rectangles) > 0:
+                for rectangle in rectangles:
+                    x, y, w, h = rectangle
+                    cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
+
+                labeled_img_path = join(label_folder_path, file_name)
+                cv2.imwrite(labeled_img_path, raw_image)
 
 if __name__ == '__main__':
     # of = open('C:\\SolarPanel\\2017-06-20\\exif.csv', 'w')
@@ -118,4 +168,4 @@ if __name__ == '__main__':
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
     # of.close()
     folder_path = r"C:/Users/h232559/Documents/projects/uav/pic/8-15/zone1-ir-15m"
-    batch_process_rotation(folder_path)
+    batch_process_label(folder_path)
