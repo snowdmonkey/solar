@@ -90,15 +90,15 @@ def batch_process_rotation(folder_path, exif_path=None):
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         degree = exif.get(file_name).get("GimbalYawDegree")
         if degree is not None:
-            if abs(degree) < 5:
+            if abs(degree) < 10:
                 rotated_img = img
-            elif abs(degree - 90.0) < 5:
+            elif abs(degree - 90.0) < 10:
                 rotated_img = rotate_and_scale(img, -90.0)
-            elif abs(degree + 90.0) < 5:
+            elif abs(degree + 90.0) < 10:
                 rotated_img = rotate_and_scale(img, 90.0)
-            elif abs(degree - 180.0) < 5:
+            elif abs(degree - 180.0) < 10:
                 rotated_img = rotate_and_scale(img, 180.0)
-            elif abs(degree + 180.0) < 5:
+            elif abs(degree + 180.0) < 10:
                 rotated_img = rotate_and_scale(img, 180.0)
             else:
                 continue
@@ -114,6 +114,7 @@ def batch_process_label(folder_path):
     """
     rotate_folder_path = join(folder_path, "rotated")
     label_folder_path = join(folder_path, "labeled")
+    rect_dict = dict()
     if not os.path.exists(label_folder_path):
         os.mkdir(label_folder_path)
     file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
@@ -145,15 +146,21 @@ def batch_process_label(folder_path):
             rectangles = list()
             for cnt in contours:
                 x, y, w, h = cv2.boundingRect(cnt)
-                if h < 2*w:
+                if h < 200*w:
                     rectangles.append((x, y, w, h))
             if len(rectangles) > 0:
+                rect_dict[file_name] = list()
                 for rectangle in rectangles:
                     x, y, w, h = rectangle
                     cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
+                    rect_dict[file_name].append({"x": x, "y": y, "w": w, "h": h})
 
                 labeled_img_path = join(label_folder_path, file_name)
                 cv2.imwrite(labeled_img_path, raw_image)
+    outfile_path = join(label_folder_path, "rect.json")
+    with open(outfile_path, "w") as file:
+        json.dump(rect_dict, file)
+
 
 if __name__ == '__main__':
     # of = open('C:\\SolarPanel\\2017-06-20\\exif.csv', 'w')
@@ -167,5 +174,5 @@ if __name__ == '__main__':
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-1', True, of)
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
     # of.close()
-    folder_path = r"C:/Users/h232559/Documents/projects/uav/pic/8-15/zone1-ir-15m"
+    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21-funingyilin-DJI\6-21-FLIR"
     batch_process_label(folder_path)
