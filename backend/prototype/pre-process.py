@@ -2,6 +2,8 @@ from os import listdir
 from os.path import isfile, join
 from extract_rect import rotate_and_scale, PanelCropper
 from detect_hotspot import HotSpotDetector
+from geomapping.geo_mapper import GeoMapper
+from scipy.cluster.hierarchy import linkage, cut_tree
 import os
 import subprocess
 import exifread
@@ -162,6 +164,81 @@ def batch_process_label(folder_path):
         json.dump(rect_dict, file)
 
 
+def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float) -> None:
+    """
+    this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
+    defects to a json file folder_path/defects.json. This function is also try to unify those defects that very close
+    to each other since they might be the same defect.
+    :param folder_path: this is the folder where the raw images rest
+    :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
+    :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
+    of the same amount of the physical distance
+    :return: nothing
+    """
+
+    with open(join(folder_path, "exif.json"), "r") as f:
+        exif = json.load(f)
+
+    with open(join(folder_path, "labeled", "rect.json"), "r") as f:
+        rect_info = json.load(f)
+
+    defects = list()
+    for image_name, rects in rect_info.items():
+        image_latitude = exif.get(image_name).get("GPSLatitude")
+        image_longitude = exif.get(image_name).get("GPSLongitude")
+
+        for rect in rects:
+            x_small_image = rect.get("x")
+            y_small_image = rect.get("y")
+
+            x_shift_small_image = x_small_image - 128
+            y_shift_small_image = y_small_image - 168
+
+            x_shift_large_image = x_shift_small_image / pixel_ratio
+            y_shift_large_image = y_shift_small_image / pixel_ratio
+
+            y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
+
+            x_large_image = x_center_large_image + x_shift_large_image
+            y_large_image = y_center_large_image + y_shift_large_image
+
+            defects.append({"image": image_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
+                            "rect": rect})
+
+#     grouping the defects according to pixel distance on the stitched image
+    pixel_location_table = np.array([[x.get("x_large_image"), x.get("y_large_image")] for x in defects])
+    linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
+    ctree = cut_tree(linkage_matrix, height=[5])
+    cluster = np.array([x[0] for x in ctree])
+    cluster_centroids = list()
+    for i in range(max(cluster)+1):
+        x_center = np.mean(pixel_location_table[cluster == i, 0])
+        y_center = np.mean(pixel_location_table[cluster == i, 1])
+        cluster_centroids.append([x_center, y_center])
+
+    clustered_defects = dict()
+
+    for i in range(len(defects)):
+        defect = defects[i]
+        defect_id_num = cluster[i]
+        defect_id = "defect" + str(defect_id_num)
+        if clustered_defects.get(defect_id) is None:
+            clustered_defects[defect_id] = dict()
+            clustered_defects[defect_id]["x"] = round(cluster_centroids[defect_id_num][0])
+            clustered_defects[defect_id]["y"] = round(cluster_centroids[defect_id_num][1])
+            clustered_defects[defect_id]["latitude"], clustered_defects[defect_id]["longitude"] = \
+                geo_mapper.pixel2gps(cluster_centroids[defect_id_num][1], cluster_centroids[defect_id_num][0])
+            clustered_defects[defect_id]["images"] = dict()
+            clustered_defects[defect_id]["images"][defect.get("image")] = [defect.get("rect")]
+        elif clustered_defects[defect_id]["images"].get(defect.get("image")) is None:
+            clustered_defects[defect_id]["images"][defect.get("image")] = [defect.get("rect")]
+        else:
+            clustered_defects[defect_id]["images"][defect.get("image")].append(defect.get("rect"))
+
+    with open(join(folder_path, "defects.json"), "w") as f:
+        json.dump(clustered_defects, f)
+
+
 if __name__ == '__main__':
     # of = open('C:\\SolarPanel\\2017-06-20\\exif.csv', 'w')
     # load_images('C:\\SolarPanel\\2017-06-20\\6-20-DJI', True, of)
@@ -175,4 +252,14 @@ if __name__ == '__main__':
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
     # of.close()
     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21-funingyilin-DJI\6-21-FLIR"
-    batch_process_label(folder_path)
+
+    pixel_anchors = [[639, 639], [639, 1328], [639, 2016],
+                     [1358, 639], [1358, 1328], [1358, 2016],
+                     [2076, 639], [2076, 1328], [2076, 2016]]
+    gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
+                   [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
+                   [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
+
+    geo_mapper = GeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+
+    batch_process_locate(folder_path, geo_mapper, 5.3793)
