@@ -80,9 +80,9 @@ def main():
             mask[tuple(coord)] = 255
         plt.subplot(n_row, n_col, j)
         plt.imshow(mask, cmap='gray')
-    plt.savefig('../pic/output.png')
+    # plt.savefig('../pic/output.png')
 
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":
