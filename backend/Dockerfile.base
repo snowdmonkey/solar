@@ -1,0 +1,10 @@
+FROM jjanzic/docker-python3-opencv
+
+MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
+
+WORKDIR /usr/src/app
+
+COPY requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
