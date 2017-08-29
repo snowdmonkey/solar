@@ -2,3 +2,4 @@ flask-restful==0.3.6
 matplotlib==2.0.2
 influxdb==4.1.1
 exifread==2.1.2
+scipy==0.19.1
