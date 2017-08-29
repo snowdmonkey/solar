@@ -28,11 +28,6 @@ function clean()
 		docker rmi -f solarapi:latest
 		echo 'Image removed.'
 	fi
-	if [ "$(docker images -q solarui:latest)" ]; then
-		echo 'Removing the image solarui ...'
-		docker rmi -f solarui:latest
-		echo 'Image removed.'
-	fi
 	echo 'Environment cleaned.'
 }
 
@@ -60,6 +55,7 @@ function cleanbase()
 
 function buildbase()
 {
+    cleanbase
     docker build --no-cache -f Dockerfile.base -t solarbase .
 }
 
