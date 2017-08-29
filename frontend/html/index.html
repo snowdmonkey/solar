@@ -6,24 +6,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- 引入 Bootstrap -->
   <link href="../css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="../css/jquery.hotspot.css">
+  <!--<link rel="stylesheet" href="../css/jquery.hotspot.css">-->
   <link rel="stylesheet" href="../css/leaflet.css">
   <link rel="stylesheet" href="../css/bootstrap.min.css">
   <link rel="stylesheet" href="../css/bootstrap-datetimepicker.min.css">
   <link rel="stylesheet" href="../css/bootstrap-select.min.css">
+  <link rel="stylesheet" href="../css/leaflet-vector-markers.css">
+  <link rel="stylesheet" href="../css/Control.FullScreen.css" />
 
 
   <script type="text/javascript" src="../js/jquery.min.js"></script>
   <script type="text/javascript" src="../js/bootstrap.min.js"></script>
 
   <script type="text/javascript" src="../js/modernizr.custom.49511.js"></script>
-  <script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>
+  <!--<script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>-->
   <script type="text/javascript" src="../js/bootstrap-select.min.js"></script>
   <script type="text/javascript" src="../js/moment.js"></script>
   <script type="text/javascript" src="../js/bootstrap-datetimepicker.js"></script>
   <!--<script type="text/javascript" src="../js/wheelzoom.js"></script>-->
   <script type="text/javascript" src="../js/leaflet.js"></script>
   <script type="text/javascript" src="../js/leaflet.ChineseTmsProviders.js"></script>
+  <script type="text/javascript" src="../js/leaflet-vector-markers.min.js"></script>
+  <script type="text/javascript" src="../js/Control.FullScreen.js"></script>
 
 
 </head>
@@ -243,28 +247,73 @@
 
 <script type="text/javascript">
 
-      var mymap = L.map("map").setView([33.58873250, 119.6334535], 18);
-      L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 20, minZoom: 5}).addTo(mymap);
+      var mymap = L.map("map",{
+        fullscreenControl: true,
+        fullscreenControlOptions:{position: "topleft"}
+      }).setView([33.58873250, 119.6334535], 18);
+      L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 21, minZoom: 5}).addTo(mymap);
       L.imageOverlay("../img/panorama.png",
         [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]).addTo(mymap);
 
       var defectMarkers = {};
+      var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "glyphicon"});
+      var unCheckedIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#466C95", prefix: "glyphicon"});
+//      var unCheckedIcon = L.VectorMarkers.icon({markerColor: "#466C95", iconSize: [30, 30]});
+      var defectIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#FF7676", prefix: "glyphicon"});
+//      var warnIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "yellow", prefix: "glyphicon"});
+      var fineIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#5DAE8B", prefix: "glyphicon"});
       var imageGroup = L.layerGroup().addTo(mymap);
+
       $.get("http://127.0.0.1:5000/defects", function(data, status){
         var defects = JSON.parse(data);
 
         for(var i = 0; i < defects.length; i++){
           var defect = defects[i];
-          defectMarkers[defect.defectId] = L.marker([defect.latitude, defect.longitude]).addTo(mymap);
+          defectMarkers[defect.defectId] =
+            L.marker([defect.latitude, defect.longitude], {icon: unCheckedIcon, draggable: true}).addTo(mymap);
         }
 
         defects.forEach(function(defect){
+          defectMarkers[defect.defectId].on("dblclick", function(){
+            var that = $(this)[0];
+            console.log(that);
+            var popup = L.popup().setLatLng(that.getLatLng());
+            var $div = $("<div>");
+            var $confirmButton = $("<button>", {type: "button", class: "btn btn-danger btn-sm"}).append("确认警报");
+            $confirmButton.on("click", function(){
+              that.setIcon(defectIcon);
+              popup.remove();
+            });
+            $div.append($confirmButton);
+            var $cancelButton = $("<button>", {type: "button", class: "btn btn-success btn-sm"}).append("取消警报");
+            $cancelButton.on("click", function(){
+              that.setIcon(fineIcon);
+              popup.remove();
+            });
+            $div.append($cancelButton);
+            popup.setContent($div[0]).openOn(mymap);
+          });
+
           $.get("http://127.0.0.1:5000/images/defect/"+defect.defectId, function(data){
             defectMarkers[defect.defectId].on("click", function(){
               imageGroup.clearLayers();
+              var cameraMarkers = [];
               JSON.parse(data).forEach(function(item){
-                var imageMarker = L.marker([item.latitude, item.longitude]).addTo(mymap);
+                var imageMarker = L.marker([item.latitude, item.longitude], {icon: cameraIcon, draggable: true}).addTo(mymap);
                 imageGroup.addLayer(imageMarker);
+                cameraMarkers.push({image: item.imageName, defect: defect.defectId, marker: imageMarker});
+
+              });
+              cameraMarkers.forEach(function(item){
+                var $div = $("<div>");
+                var imgPath = "http://127.0.0.1:5000/image/labeled?image="+item.image+"\&defect="+item.defect;
+                $div.append($("<img>", {src: imgPath}));
+                var popup = L.popup().setContent($div[0]);
+//                var pos = mymap.latLngToLayerPoint(popup._latlng);
+//                L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
+//                var draggable = new L.Draggable(popup._container, popup._wrapper);
+//                draggable.enable();
+                item.marker.bindPopup(popup);
               })
             })
           })
