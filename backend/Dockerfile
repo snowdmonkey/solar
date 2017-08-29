@@ -1,0 +1,9 @@
+FROM solarbase:latest
+
+MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
+
+COPY prototype/ /usr/src/app
+
+ENV PYTHONPATH /usr/src/app
+
+CMD [ "python", "api/api_server.py" ]
