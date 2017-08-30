@@ -1,4 +1,4 @@
-FROM solarbase:latest
+FROM solarapi:base
 
 MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
 

@@ -45,9 +45,9 @@ function build()
 function cleanbase()
 {
     remove
-    if [ "$(docker images -q solarbase)" ]; then
-        echo 'Removing the image solarbase ...'
-        docker rmi -f solarbase
+    if [ "$(docker images -q solarapi:base)" ]; then
+        echo 'Removing the image solarapi base image ...'
+        docker rmi -f solarapi:base
         echo 'Image removed.'
     fi
     echo 'Environment cleaned.'
@@ -56,7 +56,7 @@ function cleanbase()
 function buildbase()
 {
     cleanbase
-    docker build --no-cache -f Dockerfile.base -t solarbase .
+    docker build --no-cache -f Dockerfile.base -t solarapi:base .
 }
 
 cd $BASEDIR
