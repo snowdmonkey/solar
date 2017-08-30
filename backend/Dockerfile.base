@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN tar zfx Image-ExifTool-10.61.tar.gz \
     && cd Image-ExifTool-10.61 \
     && perl Makefile.PL \
-    && make install \
-    && rm -fr Image-ExifTool-10.61 
+    && make install
 
+RUN rm -fr Image-ExifTool-10.61 \
+    requirements.txt \
+    Image-ExifTool-10.61.tar.gz	
