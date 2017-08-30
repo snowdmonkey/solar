@@ -262,6 +262,7 @@
   var fineIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#5DAE8B", prefix: "glyphicon"});
   var imageGroup = L.layerGroup().addTo(mymap);
 
+  var dragStartGps = [0.0, 0.0];
   $.get("http://127.0.0.1:5000/defects", function (data, status) {
     var defects = JSON.parse(data);
 
@@ -278,7 +279,7 @@
         var popup = L.popup({offset: [0, -30]}).setLatLng(that.getLatLng());
         var $div = $("<div>");
         $div.append($("<p>").append("主串编号: 000000"));
-        $div.append($("<p>").append("异常编号:"+defect["defectId"]));
+        $div.append($("<p>").append("异常编号: "+defect["defectId"]));
         var $confirmButton = $("<button>", {type: "button", "class": "btn btn-danger btn-sm"}).append("确认警报");
         $confirmButton.on("click", function () {
           that.setIcon(defectIcon);
@@ -339,13 +340,21 @@
               var draggable = new L.Draggable(popup._container, popup._wrapper);
               draggable.enable();
             });
-//            item.marker.bindPopup(popup);
           });
-//          cameraMarkers[0].marker.getPopup().update();
-//          cameraMarkers[0].marker.fireEvent("click");
+
         });
       });
 
+      defectMarkers[defect.defectId].on("dragstart", function(){
+        dragStartGps = this.getLatLng();
+      });
+
+      defectMarkers[defect.defectId].on("dragend", function(){
+        var r = confirm("确认移动异常点至该位置？\n如果确认，该移动信息将用于改善定位服务。");
+        if (r === false) {
+          this.setLatLng(dragStartGps);
+        }
+      })
     })
   })
 
