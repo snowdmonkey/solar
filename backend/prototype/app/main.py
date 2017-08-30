@@ -36,6 +36,13 @@ def get_rotated_folder() -> str:
     return folder_path
 
 
+def get_visual_folder() -> str:
+    """
+    :return: the folder where the raw visual images are saved
+    """
+    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21-funingyilin-DJI\6-21-FLIR\rotated"
+    return folder_path
+
 @app.route("/defects")
 def get_defects() -> str:
     defects = list()
@@ -79,6 +86,17 @@ def get_labeled_image():
         cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 1)
     img_bytes = cv2.imencode(".png", img)[1]
     return send_file(io.BytesIO(img_bytes), attachment_filename="labeled.png", mimetype="image/png")
+
+
+@app.route("/image/visual")
+def get_visual_image():
+    """
+    :return: raw visual image specified by image name
+    """
+    image_name = request.args.get("image")
+    img = cv2.imread(join(get_rotated_folder(), image_name), cv2.IMREAD_COLOR)
+    img_bytes = cv2.imencode(".png", img)[1]
+    return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
 
 
 if __name__ == "__main__":
