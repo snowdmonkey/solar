@@ -12,7 +12,8 @@ services:
             - /opt/uav/data:/usr/src/app/data
         links:
             - db:mongo
-
+        ports:
+            - "5000:5000"
     frontend:
         image: solarui:latest
         volumes:

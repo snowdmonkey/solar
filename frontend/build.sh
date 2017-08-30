@@ -36,9 +36,9 @@ function build()
     clean
 
     if [ -n "$1" ]; then
-        docker build --no-cache -t solarapi:$1 .
+        docker build --no-cache -t solarui:$1 .
     else
-        docker build --no-cache -t solarapi .
+        docker build --no-cache -t solarui .
     fi
 }
 
