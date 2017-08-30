@@ -1,0 +1,24 @@
+version: '2'
+services:
+    db:
+        image: mongo:latest
+        volumes:
+            - /opt/uav/db/data:/data/db
+            - /opt/uav/db/conf:/data/configdb
+        
+    backend:
+        image: solarapi:latest
+        volumes:
+            - /opt/uav/data:/usr/src/app/data
+        links:
+            - db:mongo
+
+    frontend:
+        image: solarui:latest
+        volumes:
+            - /opt/uav/data:/var/www/html/data
+        ports:
+            - "8090:80"
+        links:
+            - db:mongo
+            - backend:solarapi
