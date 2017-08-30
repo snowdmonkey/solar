@@ -8,4 +8,4 @@ ENV PYTHONPATH /usr/src/app
 
 RUN mkdir -p /usr/src/app/data
 
-CMD [ "python", "api/api_server.py" ]
+CMD [ "python", "app/main.py" ]
