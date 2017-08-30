@@ -328,8 +328,18 @@
                 $("<div>", {id: "visImageTab", "class": "row tab-pane fad"}).append($visImg)
               )
             );
-            var popup = L.popup({closeOnClick: true}).setContent($div[0]);
-            item.marker.bindPopup(popup);
+
+
+            item.marker.on("click", function () {
+              var popup = L.popup({offset: [0, -30]}).setContent($div[0]);
+              popup.setLatLng(item.marker.getLatLng());
+              mymap.addLayer(popup);
+              var pos = mymap.latLngToLayerPoint(popup._latlng);
+              L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
+              var draggable = new L.Draggable(popup._container, popup._wrapper);
+              draggable.enable();
+            });
+//            item.marker.bindPopup(popup);
           });
 //          cameraMarkers[0].marker.getPopup().update();
 //          cameraMarkers[0].marker.fireEvent("click");
