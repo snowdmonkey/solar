@@ -1,4 +1,6 @@
-FROM php:apache
+FROM solarui:base
+
+MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
 
 COPY . /var/www/html/
 

@@ -45,9 +45,9 @@ function build()
 function cleanbase()
 {
     remove
-    if [ "$(docker images -q solarbase)" ]; then
-        echo 'Removing the image solarbase ...'
-        docker rmi -f solarbase
+    if [ "$(docker images -q solarapi:base)" ]; then
+        echo 'Removing the image solarapi base image ...'
+        docker rmi -f solarapi:base
         echo 'Image removed.'
     fi
     echo 'Environment cleaned.'
@@ -56,7 +56,7 @@ function cleanbase()
 function buildbase()
 {
     cleanbase
-    docker build --no-cache -f Dockerfile.base -t solarbase .
+    docker build --no-cache -f Dockerfile.base -t solarapi:base .
 }
 
 cd $BASEDIR
@@ -75,7 +75,7 @@ else
     echo "Usage: build.sh COMMAND"
     echo "Available Commands:"
     echo "build	Clean and build the new image"
-    echo "buildbase Build the base image with Python"
+    echo "buildbase Build the base image"
     echo "clean	Clean the environment"
     echo "remove	Remove the portal container and files"
 fi

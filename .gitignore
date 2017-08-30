@@ -17,7 +17,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -125,7 +124,7 @@ ENV/
 ## Plugin-specific files:
 
 # IntelliJ
-/out/
+*/out/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
@@ -140,3 +139,4 @@ crashlytics-build.properties
 fabric.properties
 
 .idea/
+*.iml
