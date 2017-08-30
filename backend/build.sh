@@ -6,14 +6,14 @@ REGISTRY="159.99.255.163:5000"
 
 function remove()
 {
-	if [ "$(docker ps -q -f name=solarapi)" ]; then
-		echo 'Stopping and removing the container solarapi ...'
-    	docker rm -fv solarapi
+	if [ "$(docker ps -q -f name=uavsolarpanel_backend_1)" ]; then
+		echo 'Stopping and removing the container uavsolarpanel_backend_1 ...'
+    	docker rm -fv uavsolarpanel_backend_1
     	echo 'Container removed.'
 	else
-		if [ "$(docker ps -aq -f name=solarapi)" ]; then
-    		echo 'Removing container solarapi ...'
-        	docker rm solarapi
+		if [ "$(docker ps -aq -f name=uavsolarpanel_backend_1)" ]; then
+    		echo 'Removing container uavsolarpanel_backend_1 ...'
+        	docker rm uavsolarpanel_backend_1
         	echo 'Container removed.'
     	fi
 	fi
