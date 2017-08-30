@@ -1,0 +1,12 @@
+FROM php:apache
+
+MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
+
+RUN apt-get update \
+    && apt-get install -y build-essential \
+	               python-dev \
+	               python \
+	               python-pip \
+	&& pip install --no-cache-dir pymongo \
+	               flask-restful==0.3.6 \
+	&& rm -rf /var/lib/apt/lists/*

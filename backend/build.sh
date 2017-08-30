@@ -75,7 +75,7 @@ else
     echo "Usage: build.sh COMMAND"
     echo "Available Commands:"
     echo "build	Clean and build the new image"
-    echo "buildbase Build the base image with Python"
+    echo "buildbase Build the base image"
     echo "clean	Clean the environment"
     echo "remove	Remove the portal container and files"
 fi

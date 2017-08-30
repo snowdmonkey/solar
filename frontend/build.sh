@@ -42,6 +42,23 @@ function build()
     fi
 }
 
+function cleanbase()
+{
+    remove
+    if [ "$(docker images -q solarui:base)" ]; then
+        echo 'Removing the image solarui base image ...'
+        docker rmi -f solarui:base
+        echo 'Image removed.'
+    fi
+    echo 'Environment cleaned.'
+}
+
+function buildbase()
+{
+    cleanbase
+    docker build --no-cache -f Dockerfile.base -t solarui:base .
+}
+
 cd $BASEDIR
 
 if [ "$1" == "clean" ]; then
@@ -49,12 +66,16 @@ if [ "$1" == "clean" ]; then
 elif [ "$1" == "build" ]; then
     clean
     build $2
+elif [ "$1" == "buildbase" ]; then
+    cleanbase
+    buildbase
 elif [ "$1" == "remove" ]; then
     remove
 else
     echo "Usage: build.sh COMMAND"
     echo "Available Commands:"
     echo "build	Clean and build the new image"
+	echo "buildbase Build the base image"
     echo "clean	Clean the environment"
     echo "remove	Remove the portal container and files"
 fi
