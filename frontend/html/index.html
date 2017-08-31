@@ -4,31 +4,48 @@
   <meta charset="UTF-8">
   <title>UAV太阳能电站巡检系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- 引入 Bootstrap -->
-  <!--<link href="../css/bootstrap.min.css" rel="stylesheet">-->
-  <!--<link rel="stylesheet" href="../css/jquery.hotspot.css">-->
-  <link rel="stylesheet" href="../css/leaflet.css">
-  <link rel="stylesheet" href="../css/bootstrap.min.css">
-  <link rel="stylesheet" href="../css/bootstrap-datetimepicker.min.css">
-  <link rel="stylesheet" href="../css/bootstrap-select.min.css">
-  <link rel="stylesheet" href="../css/leaflet-vector-markers.css">
-  <link rel="stylesheet" href="../css/Control.FullScreen.css"/>
 
 
   <script type="text/javascript" src="../js/jquery.min.js"></script>
+
+  <!--import bootstrap-->
+  <link rel="stylesheet" href="../css/bootstrap.min.css">
   <script type="text/javascript" src="../js/bootstrap.min.js"></script>
 
-  <script type="text/javascript" src="../js/modernizr.custom.49511.js"></script>
-  <!--<script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>-->
-  <script type="text/javascript" src="../js/bootstrap-select.min.js"></script>
+  <!--import bootstap datetimepricker plugin-->
+  <link rel="stylesheet" href="../css/bootstrap-datetimepicker.min.css">
   <script type="text/javascript" src="../js/moment.js"></script>
   <script type="text/javascript" src="../js/bootstrap-datetimepicker.js"></script>
-  <!--<script type="text/javascript" src="../js/wheelzoom.js"></script>-->
+
+  <!--import bootstrap selectize plugin-->
+  <link rel="stylesheet" href="../css/bootstrap-select.min.css">
+  <script type="text/javascript" src="../js/bootstrap-select.min.js"></script>
+
+  <!--import leaflet plugin-->
+  <link rel="stylesheet" href="../css/leaflet.css">
   <script type="text/javascript" src="../js/leaflet.js"></script>
+
+  <!--import leaflet China map provider-->
   <script type="text/javascript" src="../js/leaflet.ChineseTmsProviders.js"></script>
+
+  <!--import leaflet vector marker plugin to customize markers-->
+  <link rel="stylesheet" href="../css/leaflet-vector-markers.css">
   <script type="text/javascript" src="../js/leaflet-vector-markers.min.js"></script>
+
+  <!--leaflet full screen control plugin-->
+  <link rel="stylesheet" href="../css/Control.FullScreen.css"/>
   <script type="text/javascript" src="../js/Control.FullScreen.js"></script>
 
+  <!--leaflet minimap control plugin-->
+  <link rel="stylesheet" href="../css/Control.MiniMap.min.css"/>
+  <script type="text/javascript" src="../js/Control.MiniMap.min.js"></script>
+
+  <!--leaflet plugin for add printer-->
+  <script type="text/javascript" src="../js/leaflet.browser.print.min.js"></script>
+
+  <!--<script type="text/javascript" src="../js/modernizr.custom.49511.js"></script>-->
+  <!--<script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>-->
+  <!--<script type="text/javascript" src="../js/wheelzoom.js"></script>-->
 
 </head>
 <body>
@@ -253,6 +270,19 @@
   L.imageOverlay("../img/panorama.png",
     [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]).addTo(mymap);
 
+  var osm2 = L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 16, minZoom: 0});
+  var imageOverlay2 = L.imageOverlay("../img/panorama.png",
+    [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]);
+  var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
+  L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
+
+//  add leaflet printer plugin
+  L.browserPrint({
+      closePopupsOnPrint: true,
+      printModes: ["Portrait", "Landscape", "Custom"],
+      printModesNames: {"Portrait": "竖排", "Landscape": "横排", "Custom": "自定义"}
+    }).addTo(mymap);
+
   var defectMarkers = {};
   var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "glyphicon"});
   var unCheckedIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#466C95", prefix: "glyphicon"});
@@ -302,7 +332,7 @@
           JSON.parse(data).forEach(function (item) {
             var imageMarker = L.marker([item.latitude, item.longitude], {
               icon: cameraIcon,
-              draggable: true
+              draggable: false
             }).addTo(mymap);
             imageGroup.addLayer(imageMarker);
             cameraMarkers.push({image: item.imageName, defect: defect.defectId, marker: imageMarker});
@@ -341,7 +371,6 @@
               draggable.enable();
             });
           });
-
         });
       });
 
