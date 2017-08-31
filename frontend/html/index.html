@@ -122,8 +122,8 @@
         <div class="input-group date" id="datetimepicker1">
           <input type="text" class="form-control">
           <span class="input-group-addon">
-                        <span class="glyphicon glyphicon-calendar"></span>
-                    </span>
+            <span class="glyphicon glyphicon-calendar"></span>
+          </span>
         </div>
       </div>
     </div>
@@ -182,13 +182,13 @@
         <a class="list-group-item active">巡查事件<span class="badge">3</span></a>
 
         <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">面板标号#0020122</a>
+          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0020122</a>
         </div>
         <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">面板标号#0070692</a>
+          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0070692</a>
         </div>
         <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">面板标号#0030661</a>
+          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0030661</a>
         </div>
         <a class="list-group-item active"> </a>
       </div>
@@ -212,46 +212,36 @@
   </div>
   <div class="row clearfix">
     <div class="col-md-12 column" id="layout_container">
-      <div class="popover right pop1" data-easein="cardInRight" data-easeout="cardOutRight" id="pop1">
-        <div class="arrow"></div>
-        <div class="popover-inner">
-          <h3 class="popover-title">面板详情</h3>
-          <div class="popover-content">
-            <p>面板标号#0020122</p>
-            <img src="../img/DJI_0104.jpg" alt="small" width="600"/>
-          </div>
-        </div>
-      </div>
-      <div class="popover top pop2" data-easein="cardInTop" data-easeout="cardOutTop" id="pop2">
-        <div class="arrow"></div>
-        <div class="popover-inner">
-          <h3 class="popover-title">面板详情</h3>
-          <div class="popover-content">
-            <p>面板标号#0070692</p>
-            <img src="../img/DJI_0107.jpg" alt="small" width="600"/>
-          </div>
-        </div>
-      </div>
-      <div class="popover left pop3" data-easein="cardInLeft" data-easeout="cardOutLeft" id="pop3">
-        <div class="arrow"></div>
-        <div class="popover-inner">
-          <h3 class="popover-title">面板详情</h3>
-          <div class="popover-content">
-            <p>面板标号#0030661</p>
-            <img src="../img/DJI_0119.jpg" alt="small" width="600"/>
-          </div>
-        </div>
-      </div>
-      <!--<div class="jumbotron">-->
-      <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon1" data-target="pop1"/>-->
-      <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon2" data-target="pop2"/>-->
-      <!--<img src="../img/arrow1.png" alt="info" class="info-icon info-icon3" data-target="pop3"/>-->
-
-      <!--<img class="jumbotron" src="../img/panorama.png" width="100%" id="image2" usemap="#farmmap">-->
-
-      <!--<map name="farmmap">-->
-      <!--<area shape="circle" coords="300,300,10" onclick="alert('oops')" href="#"/>-->
-      <!--</map>-->
+      <!--<div class="popover right pop1" data-easein="cardInRight" data-easeout="cardOutRight" id="pop1">-->
+        <!--<div class="arrow"></div>-->
+        <!--<div class="popover-inner">-->
+          <!--<h3 class="popover-title">面板详情</h3>-->
+          <!--<div class="popover-content">-->
+            <!--<p>面板标号#0020122</p>-->
+            <!--<img src="../img/DJI_0104.jpg" alt="small" width="600"/>-->
+          <!--</div>-->
+        <!--</div>-->
+      <!--</div>-->
+      <!--<div class="popover top pop2" data-easein="cardInTop" data-easeout="cardOutTop" id="pop2">-->
+        <!--<div class="arrow"></div>-->
+        <!--<div class="popover-inner">-->
+          <!--<h3 class="popover-title">面板详情</h3>-->
+          <!--<div class="popover-content">-->
+            <!--<p>面板标号#0070692</p>-->
+            <!--<img src="../img/DJI_0107.jpg" alt="small" width="600"/>-->
+          <!--</div>-->
+        <!--</div>-->
+      <!--</div>-->
+      <!--<div class="popover left pop3" data-easein="cardInLeft" data-easeout="cardOutLeft" id="pop3">-->
+        <!--<div class="arrow"></div>-->
+        <!--<div class="popover-inner">-->
+          <!--<h3 class="popover-title">面板详情</h3>-->
+          <!--<div class="popover-content">-->
+            <!--<p>面板标号#0030661</p>-->
+            <!--<img src="../img/DJI_0119.jpg" alt="small" width="600"/>-->
+          <!--</div>-->
+        <!--</div>-->
+      <!--</div>-->
 
       <div id="map" style="height: 600px;"></div>
       <div class="panel-footer"></div>
@@ -276,12 +266,12 @@
   var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
   L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
 
-//  add leaflet printer plugin
+  //  add leaflet printer plugin
   L.browserPrint({
-      closePopupsOnPrint: true,
-      printModes: ["Portrait", "Landscape", "Custom"],
-      printModesNames: {"Portrait": "竖排", "Landscape": "横排", "Custom": "自定义"}
-    }).addTo(mymap);
+    closePopupsOnPrint: true,
+    printModes: ["Portrait", "Landscape", "Custom"],
+    printModesNames: {"Portrait": "竖排", "Landscape": "横排", "Custom": "自定义"}
+  }).addTo(mymap);
 
   var defectMarkers = {};
   var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "glyphicon"});
@@ -308,8 +298,8 @@
         console.log(that);
         var popup = L.popup({offset: [0, -30]}).setLatLng(that.getLatLng());
         var $div = $("<div>");
-        $div.append($("<p>").append("主串编号: 000000"));
-        $div.append($("<p>").append("异常编号: "+defect["defectId"]));
+        $div.append($("<p>").append("组串编号: 000000"));
+        $div.append($("<p>").append("异常编号: " + defect["defectId"]));
         var $confirmButton = $("<button>", {type: "button", "class": "btn btn-danger btn-sm"}).append("确认警报");
         $confirmButton.on("click", function () {
           that.setIcon(defectIcon);
@@ -360,7 +350,6 @@
               )
             );
 
-
             item.marker.on("click", function () {
               var popup = L.popup({offset: [0, -30]}).setContent($div[0]);
               popup.setLatLng(item.marker.getLatLng());
@@ -374,11 +363,11 @@
         });
       });
 
-      defectMarkers[defect.defectId].on("dragstart", function(){
+      defectMarkers[defect.defectId].on("dragstart", function () {
         dragStartGps = this.getLatLng();
       });
 
-      defectMarkers[defect.defectId].on("dragend", function(){
+      defectMarkers[defect.defectId].on("dragend", function () {
         var r = confirm("确认移动异常点至该位置？\n如果确认，该移动信息将用于改善定位服务。");
         if (r === false) {
           this.setLatLng(dragStartGps);
