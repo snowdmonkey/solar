@@ -212,37 +212,6 @@
   </div>
   <div class="row clearfix">
     <div class="col-md-12 column" id="layout_container">
-      <!--<div class="popover right pop1" data-easein="cardInRight" data-easeout="cardOutRight" id="pop1">-->
-        <!--<div class="arrow"></div>-->
-        <!--<div class="popover-inner">-->
-          <!--<h3 class="popover-title">面板详情</h3>-->
-          <!--<div class="popover-content">-->
-            <!--<p>面板标号#0020122</p>-->
-            <!--<img src="../img/DJI_0104.jpg" alt="small" width="600"/>-->
-          <!--</div>-->
-        <!--</div>-->
-      <!--</div>-->
-      <!--<div class="popover top pop2" data-easein="cardInTop" data-easeout="cardOutTop" id="pop2">-->
-        <!--<div class="arrow"></div>-->
-        <!--<div class="popover-inner">-->
-          <!--<h3 class="popover-title">面板详情</h3>-->
-          <!--<div class="popover-content">-->
-            <!--<p>面板标号#0070692</p>-->
-            <!--<img src="../img/DJI_0107.jpg" alt="small" width="600"/>-->
-          <!--</div>-->
-        <!--</div>-->
-      <!--</div>-->
-      <!--<div class="popover left pop3" data-easein="cardInLeft" data-easeout="cardOutLeft" id="pop3">-->
-        <!--<div class="arrow"></div>-->
-        <!--<div class="popover-inner">-->
-          <!--<h3 class="popover-title">面板详情</h3>-->
-          <!--<div class="popover-content">-->
-            <!--<p>面板标号#0030661</p>-->
-            <!--<img src="../img/DJI_0119.jpg" alt="small" width="600"/>-->
-          <!--</div>-->
-        <!--</div>-->
-      <!--</div>-->
-
       <div id="map" style="height: 600px;"></div>
       <div class="panel-footer"></div>
     </div>
@@ -283,7 +252,7 @@
   var imageGroup = L.layerGroup().addTo(mymap);
 
   var dragStartGps = [0.0, 0.0];
-  $.get("http://127.0.0.1:5000/defects", function (data, status) {
+  $.get("http://127.0.0.1:5000/defects", {date: "2017-06-21"}, function (data, status) {
     var defects = JSON.parse(data);
 
     for (var i = 0; i < defects.length; i++) {
@@ -318,7 +287,7 @@
       defectMarkers[defect.defectId].on("click", function () {
         imageGroup.clearLayers();
         var cameraMarkers = [];
-        $.get("http://127.0.0.1:5000/images/defect/" + defect.defectId, function (data) {
+        $.get("http://127.0.0.1:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
           JSON.parse(data).forEach(function (item) {
             var imageMarker = L.marker([item.latitude, item.longitude], {
               icon: cameraIcon,
@@ -329,9 +298,9 @@
           });
           cameraMarkers.forEach(function (item) {
             var $div = $("<div>");
-            var irImgPath = "http://127.0.0.1:5000/image/labeled?image=" + item.image + "\&defect=" + item.defect;
+            var irImgPath = "http://127.0.0.1:5000/image/labeled?image=" + item.image + "\&defect=" + item.defect + "\&date="+"2017-06-21";
             var $irImg = $("<img>", {src: irImgPath});
-            var visImgPath = "http://127.0.0.1:5000/image/visual?image=" + item.image;
+            var visImgPath = "http://127.0.0.1:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
             var $visImg = $("<img>", {src: visImgPath});
             var $ul = $("<ul>", {"class": "nav nav-pills"}).append(
               $("<li>", {"class": "active"}).append(

@@ -2,7 +2,7 @@ from os import listdir
 from os.path import isfile, join
 from extract_rect import rotate_and_scale, PanelCropper
 from detect_hotspot import HotSpotDetector
-from geomapping.geo_mapper import GeoMapper
+from geomapping.geo_mapper import GeoMapper, AnchorGeoMapper
 from scipy.cluster.hierarchy import linkage, cut_tree
 import os
 import subprocess
@@ -260,6 +260,6 @@ if __name__ == '__main__':
                    [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
                    [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
 
-    geo_mapper = GeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+    geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
 
     batch_process_locate(folder_path, geo_mapper, 5.3793)

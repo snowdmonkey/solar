@@ -1,7 +1,29 @@
 from sklearn import linear_model
+from abc import ABC, abstractmethod
 
 
-class GeoMapper:
+class GeoMapper(ABC):
+
+    @abstractmethod
+    def gps2pixel(self, latitude: float, longitude: float) -> tuple:
+        """
+        transfer a pair of gps coordinates to a pixel position on image
+        :return: (row index, col index), counting from 0
+        """
+        pass
+
+    @abstractmethod
+    def pixel2gps(self, row: int, col: int) -> tuple:
+        """
+        transfer a pixel position on an image to a pair of gps coordinates
+        :param row: row index of the pixel, counts from 0
+        :param col: col index of the pixel, counts from 0
+        :return: gps coordinates
+        """
+        pass
+
+
+class AnchorGeoMapper(GeoMapper):
 
     def __init__(self, pixel_anchors, gps_anchors):
         """
@@ -41,14 +63,14 @@ class GeoMapper:
 
         self._pixel2gps_models = (row_model, col_model)
 
-    def gps2pixel(self, latitude, longitude):
+    def gps2pixel(self, latitude: float, longitude: float):
         if self._gps2pixel_models is None:
             self._get_gps2pixel_modes()
         row_index = self._gps2pixel_models[0].predict([[latitude]])[0]
         col_index = self._gps2pixel_models[1].predict([[longitude]])[0]
         return int(round(row_index)), int(round(col_index))
 
-    def pixel2gps(self, row_index, col_index):
+    def pixel2gps(self, row_index: int, col_index: int):
         if self._pixel2gps_models is None:
             self._get_pixel2gps_models()
         latitude = self._pixel2gps_models[0].predict([[row_index]])[0]
@@ -64,7 +86,7 @@ def main():
                    [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
                    [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
 
-    geo_mapper = GeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+    geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
     # print(geo_mapper.gps2pixel(33.59034075, 119.6334535))
     print(geo_mapper.pixel2gps(0, 0))
     print(geo_mapper.pixel2gps(2715, 2655))
