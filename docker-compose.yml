@@ -10,6 +10,8 @@ services:
         image: solarapi:latest
         volumes:
             - /opt/uav/data:/usr/src/app/data
+        environment:
+            - IMG_ROOT=/usr/src/app/data
         links:
             - db:mongo
         ports:

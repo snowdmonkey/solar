@@ -22,12 +22,17 @@
 <body>
 
 <?php
-if (isset($_GET['d'])) {
-    echo $_GET['d'];
-}else{
-    echo "No params";
-}
-?>
+//if (isset($_GET['d'])) {
+//    echo $_GET['d'];
+//}else{
+//    echo "No params";
+//}
+//
+//include ('./httpful.phar');
+//$response = \Httpful\Request::get('http://127.0.0.1:8080/echo')->send();
+//echo "<br>".$response->body->key->name;
+//
+//?>
 
 <div class="container">
     <div class="row clearfix">
