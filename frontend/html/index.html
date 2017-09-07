@@ -69,7 +69,7 @@
               <a href="#"><font color="blue">事件查看</font></a>
             </li>
             <li>
-              <a href="#"><font color="blue">预约巡检</font></a>
+              <a href="#"><font color="blue">巡检管理</font></a>
             </li>
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown"><font
@@ -131,7 +131,7 @@
       $(function () {
         $('#datetimepicker1').datetimepicker(
           {
-            format: 'YYYY/MM/DD'
+            format: 'YYYY-MM-DD'
           }
         );
       });
@@ -298,7 +298,9 @@
           });
           cameraMarkers.forEach(function (item) {
             var $div = $("<div>");
-            var irImgPath = "http://127.0.0.1:5000/image/labeled?image=" + item.image + "\&defect=" + item.defect + "\&date="+"2017-06-21";
+            var irImgPath =
+              "http://127.0.0.1:5000/image/labeled?image="
+              + item.image + "\&defect=" + item.defect + "\&date="+"2017-06-21";
             var $irImg = $("<img>", {src: irImgPath});
             var visImgPath = "http://127.0.0.1:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
             var $visImg = $("<img>", {src: visImgPath});

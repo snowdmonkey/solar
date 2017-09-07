@@ -69,7 +69,6 @@ def get_defects() -> str:
 def get_images() -> str:
     """
     return a json string which contains the names of the images relating to a defect
-    :param date string in the format YYYY-mm-dd
     :param defect_id: string starts with "defect" and followed by an int, e.g., defect146
     :return: json string
     """

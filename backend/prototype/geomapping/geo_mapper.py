@@ -1,6 +1,9 @@
 from sklearn import linear_model
 from abc import ABC, abstractmethod
-
+from pyproj import Proj
+import subprocess
+import json
+import re
 
 class GeoMapper(ABC):
 
@@ -78,19 +81,75 @@ class AnchorGeoMapper(GeoMapper):
         return latitude, longitude
 
 
+class TifGeoMapper(GeoMapper):
+
+    def __init__(self, tif_path: str):
+        command = 'exiftool -j -c "%+.10f" '
+        proc = subprocess.run(command + tif_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        out = proc.stdout
+        r_json = json.loads(out.decode("utf-8"))[0]
+        project_str = r_json.get("ProjectedCSType")
+        origin_str = r_json.get("ModelTiePoint")
+        zone = int(re.search("zone [0-9]+", project_str).group(0).split(" ")[1])
+        self._x_origin = float(origin_str.split(" ")[3])
+        self._y_origin = float(origin_str.split(" ")[4])
+        self._x_pixel_scale = float(r_json.get("PixelScale").split(" ")[0])
+        self._y_pixel_scale = float(r_json.get("PixelScale").split(" ")[1])
+        self._projector = Proj(proj="utm", zone=zone, ellps="WGS84")
+
+    def _pixel2utm(self, row: int, col: int):
+        """
+        take in pixel position and return utm coordinates
+        :param row: row index, start from 0
+        :param col: col index, start from 0
+        :return: utm x, y
+        """
+        x = self._x_origin + self._x_pixel_scale * col
+        y = self._y_origin - self._y_pixel_scale * row
+
+        return x, y
+
+    def _utm2pixel(self, x: float, y: float):
+        """
+        take in the utm coordinates in the same zone and return the pixel position
+        :param x: utm x
+        :param y: utm y
+        :return: row, col in the image, start from 0
+        """
+        col = round((x - self._x_origin) / self._x_pixel_scale)
+        row = round((self._y_origin - y) / self._y_pixel_scale)
+
+        return row, col
+
+    def pixel2gps(self, row: int, col: int):
+
+        longitude, latitude = self._projector(*self._pixel2utm(row, col), inverse=True)
+        return latitude, longitude
+
+    def gps2pixel(self, latitude: float, longitude: float):
+
+        x, y = self._projector(longitude, latitude)
+        row, col = self._utm2pixel(x, y)
+        return row, col
+
+
 def main():
-    pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
-                     [1358, 639], [1358, 1328], [1358, 2016],
-                     [2076, 639], [2076, 1328], [2076, 2016]]
-    gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
-                   [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
-                   [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
+    # pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
+    #                  [1358, 639], [1358, 1328], [1358, 2016],
+    #                  [2076, 639], [2076, 1328], [2076, 2016]]
+    # gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
+    #                [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
+    #                [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
+    #
+    # geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+    # print(geo_mapper.pixel2gps(0, 0))
+    # print(geo_mapper.pixel2gps(2715, 2655))
 
-    geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-    # print(geo_mapper.gps2pixel(33.59034075, 119.6334535))
+    tif_path = r"C:\Users\h232559\Desktop\odm_orthophoto.tif"
+    geo_mapper = TifGeoMapper(tif_path)
+    # print(geo_mapper.gps2pixel(33.803890, 119.731152))
     print(geo_mapper.pixel2gps(0, 0))
-    print(geo_mapper.pixel2gps(2715, 2655))
-
+    # print(geo_mapper.pixel2gps(11465, 8642))
 
 if __name__ == "__main__":
     main()
