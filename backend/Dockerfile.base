@@ -12,7 +12,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN tar zfx Image-ExifTool-10.61.tar.gz \
     && cd Image-ExifTool-10.61 \
     && perl Makefile.PL \
-    && make install
+    && make install \
+    && apt-get update \
+    && apt-get install -y libgdal-dev \
+    && export CPLUS_INCLUDE_PATH=/usr/include/gdal \
+    && export C_INCLUDE_PATH=/usr/include/gdal \
+    && pip install GDAL==1.10.0
 
 RUN rm -fr Image-ExifTool-10.61 \
     requirements.txt \
