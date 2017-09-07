@@ -12,6 +12,9 @@ services:
             - /opt/uav/data:/usr/src/app/data
         environment:
             - IMG_ROOT=/usr/src/app/data
+            - BG_PATH=/usr/src/app/bg
+            - GSD_HIGH=1
+            - GSD_LOW=2
         links:
             - db:mongo
         ports:
