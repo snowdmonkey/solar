@@ -179,7 +179,7 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     with open(join(folder_path, "exif.json"), "r") as f:
         exif = json.load(f)
 
-    with open(join(folder_path, "labeled", "rect.json"), "r") as f:
+    with open(join(folder_path, "rect.json"), "r") as f:
         rect_info = json.load(f)
 
     defects = list()
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-1', True, of)
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
     # of.close()
-    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21-funingyilin-DJI\6-21-FLIR"
+    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21\ir"
 
     pixel_anchors = [[639, 639], [639, 1328], [639, 2016],
                      [1358, 639], [1358, 1328], [1358, 2016],

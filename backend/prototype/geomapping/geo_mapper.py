@@ -1,14 +1,16 @@
 from sklearn import linear_model
 from abc import ABC, abstractmethod
 from pyproj import Proj
+from typing import Tuple
 import subprocess
 import json
 import re
 
+
 class GeoMapper(ABC):
 
     @abstractmethod
-    def gps2pixel(self, latitude: float, longitude: float) -> tuple:
+    def gps2pixel(self, latitude: float, longitude: float) -> Tuple[int, int]:
         """
         transfer a pair of gps coordinates to a pixel position on image
         :return: (row index, col index), counting from 0
@@ -16,7 +18,7 @@ class GeoMapper(ABC):
         pass
 
     @abstractmethod
-    def pixel2gps(self, row: int, col: int) -> tuple:
+    def pixel2gps(self, row: int, col: int) -> Tuple[float, float]:
         """
         transfer a pixel position on an image to a pair of gps coordinates
         :param row: row index of the pixel, counts from 0
@@ -99,7 +101,7 @@ class TifGeoMapper(GeoMapper):
         self.width = r_json.get("ImageWidth")
         self.height = r_json.get("ImageHeight")
 
-    def _pixel2utm(self, row: int, col: int):
+    def _pixel2utm(self, row: int, col: int) -> Tuple[float, float]:
         """
         take in pixel position and return utm coordinates
         :param row: row index, start from 0
@@ -111,7 +113,7 @@ class TifGeoMapper(GeoMapper):
 
         return x, y
 
-    def _utm2pixel(self, x: float, y: float):
+    def _utm2pixel(self, x: float, y: float) -> Tuple[int, int]:
         """
         take in the utm coordinates in the same zone and return the pixel position
         :param x: utm x
@@ -123,12 +125,12 @@ class TifGeoMapper(GeoMapper):
 
         return row, col
 
-    def pixel2gps(self, row: int, col: int):
+    def pixel2gps(self, row: int, col: int) -> Tuple[float, float]:
 
         longitude, latitude = self._projector(*self._pixel2utm(row, col), inverse=True)
         return latitude, longitude
 
-    def gps2pixel(self, latitude: float, longitude: float):
+    def gps2pixel(self, latitude: float, longitude: float) -> Tuple[int, int]:
 
         x, y = self._projector(longitude, latitude)
         row, col = self._utm2pixel(x, y)
