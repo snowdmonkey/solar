@@ -1,70 +1,79 @@
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, basename
 from extract_rect import rotate_and_scale, PanelCropper
 from detect_hotspot import HotSpotDetector
 from geomapping.geo_mapper import GeoMapper, AnchorGeoMapper
 from scipy.cluster.hierarchy import linkage, cut_tree
 import os
 import subprocess
-import exifread
+# import exifread
 import json
 import cv2
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-def convert_gps(gps_info):
-    info = str(gps_info)[1:-1]
-    a, b, c = info.split(',')
-    ret = float(a) + float(b) / 60
-    d, e = c.split('/')
-    ret += float(d) / float(e) / 60 / 60
-    return ret
+# def convert_gps(gps_info):
+#     info = str(gps_info)[1:-1]
+#     a, b, c = info.split(',')
+#     ret = float(a) + float(b) / 60
+#     d, e = c.split('/')
+#     ret += float(d) / float(e) / 60 / 60
+#     return ret
 
 
-def process_exif(image, is_visual, output):
-    imgf = open(image, 'rb')
-    tags = exifread.process_file(imgf)
-    rec = '"%s", %s, %s, %s, %s\n' \
-          % (image, tags.get('EXIF DateTimeOriginal'), convert_gps(tags.get('GPS GPSLongitude')),
-             convert_gps(tags.get('GPS GPSLatitude')), is_visual)
-    output.write(rec)
+# def process_exif(image, is_visual, output):
+#     imgf = open(image, 'rb')
+#     tags = exifread.process_file(imgf)
+#     rec = '"%s", %s, %s, %s, %s\n' \
+#           % (image, tags.get('EXIF DateTimeOriginal'), convert_gps(tags.get('GPS GPSLongitude')),
+#              convert_gps(tags.get('GPS GPSLatitude')), is_visual)
+#     output.write(rec)
+#
+#
+# def load_images(image_folder, is_visual, output):
+#     """Loads the images to database
+#     :param image_folder: the string representing the folder holding the image files
+#     """
+#     images = [join(image_folder, f) for f in listdir(image_folder) if
+#               isfile(join(image_folder, f)) and f.lower().endswith('.jpg')]
+#     for i in images:
+#         process_exif(i, is_visual, output)
 
 
-def load_images(image_folder, is_visual, output):
-    """Loads the images to database
-    :param image_folder: the string representing the folder holding the image files
-    """
-    images = [join(image_folder, f) for f in listdir(image_folder) if
-              isfile(join(image_folder, f)) and f.lower().endswith('.jpg')]
-    for i in images:
-        process_exif(i, is_visual, output)
-
-
-def batch_process_exif(folder_path, outfile_path=None):
+def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
     """
     use exiftool to extract exif information, include the camera's gps, relative altitude, gesture
     :param folder_path: the path of folder that contains the IR images
     :param outfile_path: the path of json file to store the exif information, default to be under folder_path
     :return: a dictionary with key as the image name and value as the exif information
     """
+
     if outfile_path is None:
         outfile_path = join(folder_path, "exif.json")
     file_names = [x for x in listdir(folder_path) if x.endswith(".jpg")]
     exif = dict()
     for file_name in file_names:
+
+        logger.info("Processing exif informaion of file %s", file_name)
+
+        base_name = os.path.splitext(basename(file_name))[0]
         command = 'exiftool -j -c "%+.10f" '
         file_path = join(folder_path, file_name)
         proc = subprocess.run(command + file_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         out = proc.stdout
         r_json = json.loads(out.decode("utf-8"))[0]
-        exif[file_name] = dict()
-        exif[file_name]["DateTimeOriginal"] = r_json.get("DateTimeOriginal")
-        exif[file_name]["GPSLatitude"] = float(r_json.get("GPSLatitude"))
-        exif[file_name]["GPSLongitude"] = float(r_json.get("GPSLongitude"))
-        exif[file_name]["RelativeAltitude"] = r_json.get("RelativeAltitude")
-        exif[file_name]["GimbalRollDegree"] = r_json.get("GimbalRollDegree")
-        exif[file_name]["GimbalYawDegree"] = r_json.get("GimbalYawDegree")
-        exif[file_name]["GimbalPitchDegree"] = r_json.get("GimbalPitchDegree")
+        exif[base_name] = dict()
+        exif[base_name]["DateTimeOriginal"] = r_json.get("DateTimeOriginal")
+        exif[base_name]["GPSLatitude"] = float(r_json.get("GPSLatitude"))
+        exif[base_name]["GPSLongitude"] = float(r_json.get("GPSLongitude"))
+        exif[base_name]["RelativeAltitude"] = r_json.get("RelativeAltitude")
+        exif[base_name]["GimbalRollDegree"] = r_json.get("GimbalRollDegree")
+        exif[base_name]["GimbalYawDegree"] = r_json.get("GimbalYawDegree")
+        exif[base_name]["GimbalPitchDegree"] = r_json.get("GimbalPitchDegree")
     with open(outfile_path, "w") as outfile:
         json.dump(exif, outfile)
     return exif
@@ -88,9 +97,10 @@ def batch_process_rotation(folder_path, exif_path=None):
         exif = json.load(file)
     file_names = [x for x in listdir(folder_path) if x.endswith(".jpg")]
     for file_name in file_names:
+        base_name = os.path.splitext(basename(file_name))[0]
         image_path = join(folder_path, file_name)
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        degree = exif.get(file_name).get("GimbalYawDegree")
+        degree = exif.get(base_name).get("GimbalYawDegree")
         if degree is not None:
             if abs(degree) < 10:
                 rotated_img = img
@@ -103,16 +113,17 @@ def batch_process_rotation(folder_path, exif_path=None):
             elif abs(degree + 180.0) < 10:
                 rotated_img = rotate_and_scale(img, 180.0)
             else:
+                logging.warning("%s is ignored since its yaw is %f degrees", file_name, degree)
                 continue
             rotated_img_path = join(rotate_folder_path, file_name)
             cv2.imwrite(rotated_img_path, rotated_img)
 
 
-def batch_process_label(folder_path):
+def batch_process_label(folder_path: str) -> dict:
     """
     process the images under the rotated sub-directory of folder_path, label the defects with red rectangle
     :param folder_path: folder for the raw images
-    :return: nothing
+    :return: dict with key as the image name, value as the list of rectangles on the image
     """
     rotate_folder_path = join(folder_path, "rotated")
     label_folder_path = join(folder_path, "labeled")
@@ -121,6 +132,8 @@ def batch_process_label(folder_path):
         os.mkdir(label_folder_path)
     file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
     for file_name in file_names:
+        logger.info("labeling file %s", file_name)
+        base_name = os.path.splitext(basename(file_name))[0]
         file_path = join(rotate_folder_path, file_name)
         panel_cropper = PanelCropper(file_path)
         sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000,
@@ -151,20 +164,25 @@ def batch_process_label(folder_path):
                 if h < 200*w:
                     rectangles.append((x, y, w, h))
             if len(rectangles) > 0:
-                rect_dict[file_name] = list()
+                rect_dict[base_name] = dict()
+                rect_dict[base_name]["rects"] = list()
+                rect_dict[base_name]["height"] = raw_image.shape[0]
+                rect_dict[base_name]["width"] = raw_image.shape[1]
                 for rectangle in rectangles:
                     x, y, w, h = rectangle
                     cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
-                    rect_dict[file_name].append({"x": x, "y": y, "w": w, "h": h})
+                    rect_dict[base_name]["rects"].append({"x": x, "y": y, "w": w, "h": h})
 
                 labeled_img_path = join(label_folder_path, file_name)
                 cv2.imwrite(labeled_img_path, raw_image)
-    outfile_path = join(label_folder_path, "rect.json")
+    outfile_path = join(folder_path, "rect.json")
     with open(outfile_path, "w") as file:
         json.dump(rect_dict, file)
 
+    return rect_dict
 
-def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float) -> None:
+
+def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float) -> dict:
     """
     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
     defects to a json file folder_path/defects.json. This function is also try to unify those defects that very close
@@ -173,7 +191,7 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
     :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
     of the same amount of the physical distance
-    :return: nothing
+    :return: dict of {defect_id: {lat, lon, x, y, image: [rects]}}
     """
 
     with open(join(folder_path, "exif.json"), "r") as f:
@@ -183,16 +201,17 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
         rect_info = json.load(f)
 
     defects = list()
-    for image_name, rects in rect_info.items():
-        image_latitude = exif.get(image_name).get("GPSLatitude")
-        image_longitude = exif.get(image_name).get("GPSLongitude")
+    for image_name, value in rect_info.items():
+        base_name = os.path.splitext(basename(image_name))[0]
+        image_latitude = exif.get(base_name).get("GPSLatitude")
+        image_longitude = exif.get(base_name).get("GPSLongitude")
 
-        for rect in rects:
+        for rect in value["rects"]:
             x_small_image = rect.get("x")
             y_small_image = rect.get("y")
 
-            x_shift_small_image = x_small_image - 128
-            y_shift_small_image = y_small_image - 168
+            x_shift_small_image = x_small_image - (value["width"] - 1) / 2
+            y_shift_small_image = y_small_image - (value["height"] - 1) / 2
 
             x_shift_large_image = x_shift_small_image / pixel_ratio
             y_shift_large_image = y_shift_small_image / pixel_ratio
@@ -202,7 +221,7 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
             x_large_image = x_center_large_image + x_shift_large_image
             y_large_image = y_center_large_image + y_shift_large_image
 
-            defects.append({"image": image_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
+            defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
                             "rect": rect})
 
 #     grouping the defects according to pixel distance on the stitched image
@@ -238,6 +257,8 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     with open(join(folder_path, "defects.json"), "w") as f:
         json.dump(clustered_defects, f)
 
+    return clustered_defects
+
 
 if __name__ == '__main__':
     # of = open('C:\\SolarPanel\\2017-06-20\\exif.csv', 'w')
@@ -252,6 +273,8 @@ if __name__ == '__main__':
     # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
     # of.close()
     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21\ir"
+
+    # batch_process_label(folder_path=folder_path)
 
     pixel_anchors = [[639, 639], [639, 1328], [639, 2016],
                      [1358, 639], [1358, 1328], [1358, 2016],

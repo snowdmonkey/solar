@@ -1,16 +1,18 @@
 from flask import Flask, request, send_file
 from flask_cors import CORS
 from os.path import join
+from image_process import ImageProcessPipeline
 import os
 import json
 import cv2
 import io
+import logging
 
 app = Flask(__name__)
 CORS(app)
 
-defects_summary = None
-exif = None
+# defects_summary = None
+# exif = None
 image_root_path = None
 
 
@@ -22,18 +24,14 @@ def get_image_root() -> str:
 
 
 def get_defects_summary(date: str) -> dict:
-    global defects_summary
-    if defects_summary is None:
-        with open(join(get_image_root(), date, "ir/defects.json")) as f:
-            defects_summary = json.load(f)
+    with open(join(get_image_root(), date, "ir/defects.json")) as f:
+        defects_summary = json.load(f)
     return defects_summary
 
 
 def get_exif(date: str) -> dict:
-    global exif
-    if exif is None:
-        with open(join(get_image_root(), date, "ir/exif.json")) as f:
-            exif = json.load(f)
+    with open(join(get_image_root(), date, "ir/exif.json")) as f:
+        exif = json.load(f)
     return exif
 
 
@@ -53,23 +51,29 @@ def get_visual_folder(date: str) -> str:
     return folder_path
 
 
-@app.route("/defects")
+@app.route("/defects", methods=["POST", "GET"])
 def get_defects() -> str:
-    defects = list()
-    date = request.args.get("date")
-    for defect_id, defect_info in get_defects_summary(date).items():
-        defect = {"defectId": defect_id,
-                  "latitude": defect_info.get("latitude"),
-                  "longitude": defect_info.get("longitude")}
-        defects.append(defect)
-    return json.dumps(defects)
+    if request.method == "GET":
+        defects = list()
+        date = request.args.get("date")
+        for defect_id, defect_info in get_defects_summary(date).items():
+            defect = {"defectId": defect_id,
+                      "latitude": defect_info.get("latitude"),
+                      "longitude": defect_info.get("longitude")}
+            defects.append(defect)
+        return json.dumps(defects)
+    elif request.method == "POST":
+        date = request.form.get("date")
+        folder_path = join(get_image_root(), date)
+        pipeline = ImageProcessPipeline(image_folder=folder_path, date=date)
+        pipeline.run()
+        return "success"
 
 
 @app.route("/images/defect")
 def get_images() -> str:
     """
     return a json string which contains the names of the images relating to a defect
-    :param defect_id: string starts with "defect" and followed by an int, e.g., defect146
     :return: json string
     """
     date = request.args.get("date")
@@ -90,10 +94,11 @@ def get_labeled_image():
     generate and return an image with image name and defect id, the corresponding defects should be labeled on the image
     :return:
     """
-    image_name = request.args.get("image")
+    base_image_name = request.args.get("image")
+    image_name = base_image_name + ".jpg"
     defect_id = request.args.get("defect")
     date = request.args.get("date")
-    rects = get_defects_summary(date).get(defect_id).get("images").get(image_name)
+    rects = get_defects_summary(date).get(defect_id).get("images").get(base_image_name)
     img = cv2.imread(join(get_rotated_folder(date), image_name), cv2.IMREAD_COLOR)
     for rect in rects:
         x, y, w, h = rect.get("x"), rect.get("y"), rect.get("w"), rect.get("h")
@@ -107,12 +112,16 @@ def get_visual_image():
     """
     :return: raw visual image specified by image name
     """
-    image_name = request.args.get("image")
+    base_image_name = request.args.get("image")
+    image_name = base_image_name + ".jpg"
     date = request.args.get("date")
-    img = cv2.imread(join(get_rotated_folder(date), image_name), cv2.IMREAD_COLOR)
+    img = cv2.imread(join(get_visual_folder(date), image_name), cv2.IMREAD_COLOR)
     img_bytes = cv2.imencode(".png", img)[1]
     return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        handlers=[logging.FileHandler("log"), logging.StreamHandler()])
+
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)

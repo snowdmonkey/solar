@@ -13,8 +13,9 @@ services:
         environment:
             - IMG_ROOT=/usr/src/app/data
             - BG_PATH=/usr/src/app/bg
-            - GSD_HIGH=1
-            - GSD_LOW=2
+            - GSD_PANORAMA=5.3793
+            - GSD_IR=1
+            - MONGO_HOST=mongo
         links:
             - db:mongo
         ports:

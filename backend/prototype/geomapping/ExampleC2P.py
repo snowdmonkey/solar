@@ -1,5 +1,5 @@
 # Import the api
-import Coords2Pix.C2P as C2P
+import geomapping.Coords2Pix.C2P as C2P
 
 # Call this method to convert Degree Minute Second to Degree Decimal Format I just used coordinates from a random image
 # method has the following form dmsToDD(degree,minutes,seconds) returns a Decimal coordinate value
