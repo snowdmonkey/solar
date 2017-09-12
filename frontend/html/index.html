@@ -252,7 +252,7 @@
   var imageGroup = L.layerGroup().addTo(mymap);
 
   var dragStartGps = [0.0, 0.0];
-  $.get("http://127.0.0.1:5000/defects", {date: "2017-06-21"}, function (data, status) {
+  $.get("http://159.99.234.54:5000/defects", {date: "2017-06-21"}, function (data, status) {
     var defects = JSON.parse(data);
 
     for (var i = 0; i < defects.length; i++) {
@@ -287,7 +287,7 @@
       defectMarkers[defect.defectId].on("click", function () {
         imageGroup.clearLayers();
         var cameraMarkers = [];
-        $.get("http://127.0.0.1:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
+        $.get("http://159.99.234.54:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
           JSON.parse(data).forEach(function (item) {
             var imageMarker = L.marker([item.latitude, item.longitude], {
               icon: cameraIcon,
@@ -299,10 +299,10 @@
           cameraMarkers.forEach(function (item) {
             var $div = $("<div>");
             var irImgPath =
-              "http://127.0.0.1:5000/image/labeled?image="
+              "http://159.99.234.54:5000/image/labeled?image="
               + item.image + "\&defect=" + item.defect + "\&date="+"2017-06-21";
             var $irImg = $("<img>", {src: irImgPath});
-            var visImgPath = "http://127.0.0.1:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
+            var visImgPath = "http://159.99.234.54:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
             var $visImg = $("<img>", {src: visImgPath});
             var $ul = $("<ul>", {"class": "nav nav-pills"}).append(
               $("<li>", {"class": "active"}).append(
