@@ -1,12 +1,15 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, abort
 from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
-import os
+from pymongo import MongoClient
+from typing import Union
 import json
 import cv2
 import io
 import logging
+import os
+
 
 app = Flask(__name__)
 CORS(app)
@@ -14,6 +17,15 @@ CORS(app)
 # defects_summary = None
 # exif = None
 image_root_path = None
+mongo_client = None
+
+
+def get_mongo_client() -> MongoClient:
+    global mongo_client
+    if mongo_client is None:
+        mongo_host = os.getenv("MONGO_HOST", "mongo")
+        mongo_client = MongoClient(host=mongo_host, port=27017)
+    return mongo_client
 
 
 def get_image_root() -> str:
@@ -23,15 +35,27 @@ def get_image_root() -> str:
     return image_root_path
 
 
-def get_defects_summary(date: str) -> dict:
-    with open(join(get_image_root(), date, "ir/defects.json")) as f:
-        defects_summary = json.load(f)
+def get_defects_summary(date: str) -> Union[None, dict]:
+
+    # with open(join(get_image_root(), date, "ir/defects.json")) as f:
+    #     defects_summary = json.load(f)
+
+    value = get_mongo_client().solar.defect.find_one({"date": date}, {"value": 1})
+    if value is None:
+        defects_summary = None
+    else:
+        defects_summary = value.get("value")
     return defects_summary
 
 
-def get_exif(date: str) -> dict:
-    with open(join(get_image_root(), date, "ir/exif.json")) as f:
-        exif = json.load(f)
+def get_exif(date: str) -> Union[dict, None]:
+    # with open(join(get_image_root(), date, "ir/exif.json")) as f:
+    #     exif = json.load(f)
+    value = get_mongo_client().solar.exif.find_one({"date": date}, {"value": 1})
+    if value is None:
+        exif = None
+    else:
+        exif = value.get("value")
     return exif
 
 
@@ -56,12 +80,16 @@ def get_defects() -> str:
     if request.method == "GET":
         defects = list()
         date = request.args.get("date")
-        for defect_id, defect_info in get_defects_summary(date).items():
-            defect = {"defectId": defect_id,
-                      "latitude": defect_info.get("latitude"),
-                      "longitude": defect_info.get("longitude")}
-            defects.append(defect)
-        return json.dumps(defects)
+        defect_summary = get_defects_summary(date)
+        if defect_summary is None:
+            abort(404)
+        else:
+            for defect_id, defect_info in get_defects_summary(date).items():
+                defect = {"defectId": defect_id,
+                          "latitude": defect_info.get("latitude"),
+                          "longitude": defect_info.get("longitude")}
+                defects.append(defect)
+            return json.dumps(defects)
     elif request.method == "POST":
         date = request.form.get("date")
         folder_path = join(get_image_root(), date)
@@ -81,9 +109,12 @@ def get_images() -> str:
     defect_info = get_defects_summary(date).get(defect_id)
     image_names = defect_info.get("images")
     results = list()
+    exif = get_exif(date)
+    if exif is None:
+        abort(404)
     for image_name in image_names:
-        latitude = get_exif(date).get(image_name).get("GPSLatitude")
-        longitude = get_exif(date).get(image_name).get("GPSLongitude")
+        latitude = exif.get(image_name).get("GPSLatitude")
+        longitude = exif.get(image_name).get("GPSLongitude")
         results.append({"imageName": image_name, "latitude": latitude, "longitude": longitude})
     return json.dumps(results)
 

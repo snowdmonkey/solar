@@ -252,100 +252,116 @@
   var imageGroup = L.layerGroup().addTo(mymap);
 
   var dragStartGps = [0.0, 0.0];
-  $.get("http://159.99.234.54:5000/defects", {date: "2017-06-21"}, function (data, status) {
-    var defects = JSON.parse(data);
 
-    for (var i = 0; i < defects.length; i++) {
-      var defect = defects[i];
-      defectMarkers[defect.defectId] =
-        L.marker([defect.latitude, defect.longitude], {icon: unCheckedIcon, draggable: true}).addTo(mymap);
-    }
+  $("#datetimepicker1").on("dp.change", function (e) {
+    var selectedDate = e.date.format("YYYY-MM-DD");
+    drawDefects(selectedDate);
+  });
 
-    defects.forEach(function (defect) {
-      defectMarkers[defect.defectId].on("contextmenu", function () {
-        var that = $(this)[0];
-        console.log(that);
-        var popup = L.popup({offset: [0, -30]}).setLatLng(that.getLatLng());
-        var $div = $("<div>");
-        $div.append($("<p>").append("组串编号: 000000"));
-        $div.append($("<p>").append("异常编号: " + defect["defectId"]));
-        var $confirmButton = $("<button>", {type: "button", "class": "btn btn-danger btn-sm"}).append("确认警报");
-        $confirmButton.on("click", function () {
-          that.setIcon(defectIcon);
-          popup.remove();
-        });
-        $div.append($confirmButton);
-        var $cancelButton = $("<button>", {type: "button", "class": "btn btn-success btn-sm"}).append("取消警报");
-        $cancelButton.on("click", function () {
-          that.setIcon(fineIcon);
-          popup.remove();
-        });
-        $div.append($cancelButton);
-        popup.setContent($div[0]).openOn(mymap);
-      });
+  function drawDefects(selectedDate) {
+    $.get("http://127.0.0.1:5000/defects", {date: selectedDate}, function (data, status) {
+      var defects = JSON.parse(data);
 
-      defectMarkers[defect.defectId].on("click", function () {
-        imageGroup.clearLayers();
-        var cameraMarkers = [];
-        $.get("http://159.99.234.54:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
-          JSON.parse(data).forEach(function (item) {
-            var imageMarker = L.marker([item.latitude, item.longitude], {
-              icon: cameraIcon,
-              draggable: false
-            }).addTo(mymap);
-            imageGroup.addLayer(imageMarker);
-            cameraMarkers.push({image: item.imageName, defect: defect.defectId, marker: imageMarker});
+      for (var i = 0; i < defects.length; i++) {
+        var defect = defects[i];
+        defectMarkers[defect.defectId] =
+          L.marker([defect.latitude, defect.longitude], {icon: unCheckedIcon, draggable: true}).addTo(mymap);
+      }
+
+      defects.forEach(function (defect) {
+        defectMarkers[defect.defectId].on("contextmenu", function () {
+          var that = $(this)[0];
+          console.log(that);
+          var popup = L.popup({offset: [0, -30]}).setLatLng(that.getLatLng());
+          var $div = $("<div>");
+          $div.append($("<p>").append("组串编号: 000000"));
+          $div.append($("<p>").append("异常编号: " + defect["defectId"]));
+          var $confirmButton = $("<button>", {type: "button", "class": "btn btn-danger btn-sm"}).append("确认警报");
+          $confirmButton.on("click", function () {
+            that.setIcon(defectIcon);
+            popup.remove();
           });
-          cameraMarkers.forEach(function (item) {
-            var $div = $("<div>");
-            var irImgPath =
-              "http://159.99.234.54:5000/image/labeled?image="
-              + item.image + "\&defect=" + item.defect + "\&date="+"2017-06-21";
-            var $irImg = $("<img>", {src: irImgPath});
-            var visImgPath = "http://159.99.234.54:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
-            var $visImg = $("<img>", {src: visImgPath});
-            var $ul = $("<ul>", {"class": "nav nav-pills"}).append(
-              $("<li>", {"class": "active"}).append(
-                $("<a>", {"data-toggle": "tab", "href": "#irImageTab"}).append("红外照片")
-              )
-            ).append(
-              $("<li>").append(
-                $("<a>", {"data-toggle": "tab", "href": "#visImageTab"}).append("可见光照片")
-              )
-            );
-            $div.append($ul).append(
-              $("<div>", {"class": "tab-content"}).append(
-                $("<div>", {id: "irImageTab", "class": "row tab-pane fab in active"}).append($irImg)
-              ).append(
-                $("<div>", {id: "visImageTab", "class": "row tab-pane fad"}).append($visImg)
-              )
-            );
+          $div.append($confirmButton);
+          var $cancelButton = $("<button>", {type: "button", "class": "btn btn-success btn-sm"}).append("取消警报");
+          $cancelButton.on("click", function () {
+            that.setIcon(fineIcon);
+            popup.remove();
+          });
+          $div.append($cancelButton);
+          popup.setContent($div[0]).openOn(mymap);
+        });
 
-            item.marker.on("click", function () {
-              var popup = L.popup({offset: [0, -30]}).setContent($div[0]);
-              popup.setLatLng(item.marker.getLatLng());
-              mymap.addLayer(popup);
-              var pos = mymap.latLngToLayerPoint(popup._latlng);
-              L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
-              var draggable = new L.Draggable(popup._container, popup._wrapper);
-              draggable.enable();
+        defectMarkers[defect.defectId].on("click", function () {
+          imageGroup.clearLayers();
+          var cameraMarkers = [];
+//        $.get("http://159.99.234.54:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
+          $.get("http://127.0.0.1:5000/images/defect", {
+            date: selectedDate,
+            defectId: defect.defectId
+          }, function (data) {
+            JSON.parse(data).forEach(function (item) {
+              var imageMarker = L.marker([item.latitude, item.longitude], {
+                icon: cameraIcon,
+                draggable: false
+              }).addTo(mymap);
+              imageGroup.addLayer(imageMarker);
+              cameraMarkers.push({image: item.imageName, defect: defect.defectId, marker: imageMarker});
+            });
+            cameraMarkers.forEach(function (item) {
+              var $div = $("<div>");
+              var irImgPath =
+//              "http://159.99.234.54:5000/image/labeled?image="
+                "http://127.0.0.1:5000/image/labeled?image="
+                + item.image + "\&defect=" + item.defect + "\&date=" + selectedDate;
+              var $irImg = $("<img>", {src: irImgPath});
+//            var visImgPath = "http://159.99.234.54:5000/image/visual?image=" + item.image + "\&date="+"2017-06-21";
+              var visImgPath = "http://127.0.0.1:5000/image/visual?image=" + item.image + "\&date=" + selectedDate;
+              var $visImg = $("<img>", {src: visImgPath});
+              var $ul = $("<ul>", {"class": "nav nav-pills"}).append(
+                $("<li>", {"class": "active"}).append(
+                  $("<a>", {"data-toggle": "tab", "href": "#irImageTab"}).append("红外照片")
+                )
+              ).append(
+                $("<li>").append(
+                  $("<a>", {"data-toggle": "tab", "href": "#visImageTab"}).append("可见光照片")
+                )
+              );
+              $div.append($ul).append(
+                $("<div>", {"class": "tab-content"}).append(
+                  $("<div>", {id: "irImageTab", "class": "row tab-pane fab in active"}).append($irImg)
+                ).append(
+                  $("<div>", {id: "visImageTab", "class": "row tab-pane fad"}).append($visImg)
+                )
+              );
+
+              item.marker.on("click", function () {
+                var popup = L.popup({offset: [0, -30]}).setContent($div[0]);
+                popup.setLatLng(item.marker.getLatLng());
+                mymap.addLayer(popup);
+                var pos = mymap.latLngToLayerPoint(popup._latlng);
+                L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
+                var draggable = new L.Draggable(popup._container, popup._wrapper);
+                draggable.enable();
+              });
             });
           });
         });
-      });
 
-      defectMarkers[defect.defectId].on("dragstart", function () {
-        dragStartGps = this.getLatLng();
-      });
+        defectMarkers[defect.defectId].on("dragstart", function () {
+          dragStartGps = this.getLatLng();
+        });
 
-      defectMarkers[defect.defectId].on("dragend", function () {
-        var r = confirm("确认移动异常点至该位置？\n如果确认，该移动信息将用于改善定位服务。");
-        if (r === false) {
-          this.setLatLng(dragStartGps);
-        }
+        defectMarkers[defect.defectId].on("dragend", function () {
+          var r = confirm("确认移动异常点至该位置？\n如果确认，该移动信息将用于改善定位服务。");
+          if (r === false) {
+            this.setLatLng(dragStartGps);
+          }
+        })
       })
     })
-  })
+  }
+
+
 
 </script>
 
