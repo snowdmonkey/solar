@@ -1,4 +1,4 @@
-from geomapping.geo_mapper import TifGeoMapper
+from geo_mapper import TifGeoMapper
 
 
 def get_tif_coordinates(tif_path: str):
