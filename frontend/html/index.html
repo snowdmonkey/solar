@@ -243,6 +243,7 @@
   }).addTo(mymap);
 
   var defectMarkers = {};
+  var defectGroup = L.layerGroup().addTo(mymap)
   var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "glyphicon"});
   var unCheckedIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#466C95", prefix: "glyphicon"});
   //      var unCheckedIcon = L.VectorMarkers.icon({markerColor: "#466C95", iconSize: [30, 30]});
@@ -253,12 +254,19 @@
 
   var dragStartGps = [0.0, 0.0];
 
+  mymap.on("click", function(e){
+    imageGroup.clearLayers();
+  });
+
   $("#datetimepicker1").on("dp.change", function (e) {
     var selectedDate = e.date.format("YYYY-MM-DD");
     drawDefects(selectedDate);
   });
 
   function drawDefects(selectedDate) {
+    defectMarkers = {};
+    defectGroup.clearLayers();
+    imageGroup.clearLayers();
     $.get("http://127.0.0.1:5000/defects", {date: selectedDate}, function (data, status) {
       var defects = JSON.parse(data);
 
@@ -266,6 +274,7 @@
         var defect = defects[i];
         defectMarkers[defect.defectId] =
           L.marker([defect.latitude, defect.longitude], {icon: unCheckedIcon, draggable: true}).addTo(mymap);
+        defectGroup.addLayer(defectMarkers[defect.defectId]);
       }
 
       defects.forEach(function (defect) {
