@@ -86,8 +86,8 @@ class AnchorGeoMapper(GeoMapper):
 class TifGeoMapper(GeoMapper):
 
     def __init__(self, tif_path: str):
-        command = 'exiftool -j -c "%+.10f" '
-        proc = subprocess.run(command + tif_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        command = ['exiftool', '-j', '-c', '%+.10f', tif_path]
+        proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         out = proc.stdout
         r_json = json.loads(out.decode("utf-8"))[0]
         project_str = r_json.get("ProjectedCSType")

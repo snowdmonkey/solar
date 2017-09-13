@@ -3,9 +3,11 @@ from os.path import join
 from pymongo import MongoClient
 from image_processing_functions import batch_process_exif, batch_process_rotation, batch_process_label, \
     batch_process_locate
+from defect_category import DefectCategory
 import logging
 import sys
 import os
+
 
 
 class ImageProcessPipeline:
@@ -59,8 +61,7 @@ class ImageProcessPipeline:
         results = dict()
         results["date"] = self._date
         results["value"] = exif_dict
-        self._mongo_client.solar.exif.insert_one(results)
-
+        self._mongo_client.solar.exif.update_one({"date": self._date}, {"$set": results}, upsert=True)
         self.logger.info("processing exif ends")
 
     def _process_rotate(self):
@@ -74,7 +75,7 @@ class ImageProcessPipeline:
         results = dict()
         results["date"] = self._date
         results["value"] = rect_dict
-        self._mongo_client.solar.rect.insert_one(results)
+        self._mongo_client.solar.rect.update_one({"date": self._date}, {"$set": results}, upsert=True)
         self.logger.info("defects labeling ends")
 
     def _process_locate(self):
@@ -86,8 +87,7 @@ class ImageProcessPipeline:
         results = dict()
         results["date"] = self._date
         results["value"] = defect_dict
-        self._mongo_client.solar.defect.insert_one(results)
-
+        self._mongo_client.solar.defect.update_one({"date": self._date}, {"$set": results}, upsert=True)
         self.logger.info("defects locating ends")
 
     @staticmethod

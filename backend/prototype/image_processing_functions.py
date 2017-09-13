@@ -4,6 +4,7 @@ from extract_rect import rotate_and_scale, PanelCropper
 from detect_hotspot import HotSpotDetector
 from geomapping.geo_mapper import GeoMapper, AnchorGeoMapper
 from scipy.cluster.hierarchy import linkage, cut_tree
+from defect_category import DefectCategory
 import os
 import subprocess
 # import exifread
@@ -191,7 +192,7 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
     :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
     of the same amount of the physical distance
-    :return: dict of {defect_id: {lat, lon, x, y, image: [rects]}}
+    :return: dict of {defect_id: {lat, lon, x, y, category, image: [rects]}}
     """
 
     with open(join(folder_path, "exif.json"), "r") as f:
@@ -243,6 +244,7 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
         defect_id = "defect" + str(defect_id_num)
         if clustered_defects.get(defect_id) is None:
             clustered_defects[defect_id] = dict()
+            clustered_defects[defect_id]["category"] = DefectCategory.UNCONFIRMED
             clustered_defects[defect_id]["x"] = round(cluster_centroids[defect_id_num][0])
             clustered_defects[defect_id]["y"] = round(cluster_centroids[defect_id_num][1])
             clustered_defects[defect_id]["latitude"], clustered_defects[defect_id]["longitude"] = \
