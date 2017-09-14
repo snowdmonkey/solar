@@ -24,6 +24,9 @@ services:
         image: solarui:latest
         volumes:
             - {$DATA_ROOT}:{$UI_DATA}
+		environment:
+            - UI_MAP={$UI_DATA}/{$UI_MAP}
+			- IMAGE_PATH={$IMAGE_PATH}
         ports:
             - "8090:80"
         links:
