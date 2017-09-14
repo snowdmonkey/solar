@@ -1,0 +1,37 @@
+version: '2'
+services:
+    db:
+        image: mongo:latest
+        volumes:
+            - {$DB_ROOT}/data:/data/db
+            - {$DB_ROOT}/conf:/data/configdb
+        
+    backend:
+        image: solarapi:latest
+        volumes:
+            - {$DATA_ROOT}:{$APP_DATA}
+        environment:
+            - IMG_ROOT={$APP_DATA}
+            - BG_PATH={$APP_DATA}/{$PANORAMA}
+            - GSD_PANORAMA={$GSD_PANORAMA}
+            - GSD_IR={$GSD_IR}
+            - MONGO_HOST=mongo
+        links:
+            - db:mongo
+        ports:
+            - "5000:5000"
+    frontend:
+        image: solarui:latest
+        volumes:
+            - {$DATA_ROOT}:{$UI_DATA}
+        environment:
+            - UI_MAP={$UI_DATA}/{$UI_MAP}
+            - IMAGE_PATH={$IMAGE_PATH}
+            - GPS_CENTER="{$GPS_CENTER}"
+            - GPS_TOP="{$GPS_TOP}"
+            - GPS_BOTTOM="{$GPS_BOTTOM}"
+        ports:
+            - "8090:80"
+        links:
+            - db:mongo
+            - backend:solarapi

@@ -6,4 +6,6 @@ WORKDIR /usr/src/app
 
 COPY . ./
 
+ENV PYTHONPATH /usr/src/app
+
 RUN rm -fr Dockerfile
