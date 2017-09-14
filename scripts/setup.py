@@ -5,6 +5,7 @@ import sys
 
 from get_map_coordinates import get_tif_coordinates
 
+
 class TenantInfo(object):
     def __init__(self, section: str):
         config = ConfigParser()
@@ -19,7 +20,7 @@ class TenantInfo(object):
     def __getattr__(self, item):
         if item in self._vals.keys():
             ret = self._vals.get(item)
-            if ret is tuple:
+            if type(ret) is tuple:
                 ret = ','.join(ret)
             return ret
         else:
