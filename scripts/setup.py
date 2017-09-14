@@ -18,7 +18,10 @@ class TenantInfo(object):
 
     def __getattr__(self, item):
         if item in self._vals.keys():
-            return self._vals.get(item)
+            ret = self._vals.get(item)
+            if ret is tuple:
+                ret = ','.join(ret)
+            return ret
         else:
             raise AttributeError
 
