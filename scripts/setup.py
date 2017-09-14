@@ -21,7 +21,10 @@ class TenantInfo(object):
         if item in self._vals.keys():
             ret = self._vals.get(item)
             if type(ret) is tuple:
-                ret = ','.join(ret)
+                sv = []
+                for v in ret:
+                    sv.append(str(v))
+                ret = ','.join(sv)
             return ret
         else:
             raise AttributeError
