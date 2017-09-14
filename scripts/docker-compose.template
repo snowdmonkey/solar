@@ -23,7 +23,7 @@ services:
     frontend:
         image: solarui:latest
         volumes:
-            - {$DATA_ROOT}:/var/www/html/data
+            - {$DATA_ROOT}:{$UI_DATA}
         ports:
             - "8090:80"
         links:

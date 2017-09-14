@@ -1,5 +1,5 @@
 from configparser import ConfigParser
-from os import sep
+from os import sep, remove
 from os.path import isdir, isfile
 import sys
 
@@ -8,36 +8,63 @@ class TenantInfo(object):
     def __init__(self, section: str):
         config = ConfigParser()
         config.read('conf/config.ini')
+        self._vals = {}
         if config.has_section(section):
-            self.host = config.get(section, 'HOST')
-            self.dbroot = config.get(section, 'DB_ROOT')
-            self.dataroot = config.get(section, 'DATA_ROOT')
-            self.panorama = config.get(section, 'PANORAMA')
-            self.gsdpanorama = config.get(section, 'GSD_PANORAMA')
-            self.gsd = config.get(section, 'GSD')
+            for item in config.items(section):
+                self._vals.update({item[0].upper(): item[1]})
         else:
             print('No configuration for Tenant %s' % section)
+
+    def __getattr__(self, item):
+        if item in self._vals.keys():
+            return self._vals.get(item)
+        else:
+            raise AttributeError
+
+    def get_attrs(self):
+        return self._vals.keys()
+
+
+def check_info(info: TenantInfo):
+    ret = True
+    if not isdir(sep.join((info.DB_ROOT, 'data'))) or not isdir(sep.join((info.DB_ROOT, 'conf'))):
+        print('Invalid DB_ROOT.')
+        ret = False
+    elif not isdir(info.DATA_ROOT):
+        print('Invalid DATA_ROOT')
+        ret = False
+    elif not isfile(sep.join((info.DATA_ROOT, info.PANORAMA))):
+        print('Invalid PANORAMA')
+        ret = False
+    else:
+        try:
+            float(info.GSD_PANORAMA)
+        except ValueError:
+            print('Invalid GSD_PANORAMA')
+            ret = False
+        try:
+            float(info.GSD_IR)
+        except ValueError:
+            print('Invalid GSD_IR')
+            ret = False
+    return ret
+
+
+def build_compose_file(template, info):
+    path = 'conf/docker-compose.yml'
+    if isfile(path):
+        remove(path)
+    with open('conf/docker-compose.yml', 'w') as ofile:
+        for line in template:
+            for attr in info.get_attrs():
+                formatted = '{$%s}' % attr
+                line = line.replace(formatted, info.__getattr__(attr))
+            ofile.write(line)
 
 
 if __name__ == "__main__":
     tinfo = TenantInfo(sys.argv[1])
-    if not isdir(sep.join((tinfo.dbroot, 'data'))) or not isdir(sep.join((tinfo.dbroot, 'conf'))):
-        print('Invalid DB_ROOT.')
-    elif not isdir(tinfo.dataroot):
-        print('Invalid DATA_ROOT')
-    elif not isfile(sep.join((tinfo.dataroot, tinfo.panorama))):
-        print('Invalid PANORAMA')
-    else:
-        try:
-            float(tinfo.gsdpanorama)
-        except ValueError:
-            print('Invalid GSD_PANORAMA')
-            exit(-1)
-        try:
-            float(tinfo.gsd)
-        except ValueError:
-            print('Invalid GSD')
-            exit(-1)
+
+    if check_info(tinfo):
         with open('docker-compose.template', 'r') as f:
-            for l in f:
-                print(l)
+            build_compose_file(f, tinfo)
