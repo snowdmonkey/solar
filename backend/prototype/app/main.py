@@ -10,7 +10,6 @@ import io
 import logging
 import os
 
-
 app = Flask(__name__)
 CORS(app)
 
@@ -36,7 +35,6 @@ def get_image_root() -> str:
 
 
 def get_defects_summary(date: str) -> Union[None, dict]:
-
     # with open(join(get_image_root(), date, "ir/defects.json")) as f:
     #     defects_summary = json.load(f)
 
@@ -87,7 +85,9 @@ def get_defects() -> str:
             for defect_id, defect_info in get_defects_summary(date).items():
                 defect = {"defectId": defect_id,
                           "latitude": defect_info.get("latitude"),
-                          "longitude": defect_info.get("longitude")}
+                          "longitude": defect_info.get("longitude"),
+                          "category": defect_info.get("category"),
+                          "groupId": defect_info.get("group")}
                 defects.append(defect)
             return json.dumps(defects)
     elif request.method == "POST":
@@ -96,6 +96,29 @@ def get_defects() -> str:
         pipeline = ImageProcessPipeline(image_folder=folder_path, date=date)
         pipeline.run()
         return "success"
+
+
+@app.route("/defect/<string:defect_id>/position", methods=["POST"])
+def set_defect_location(defect_id: str) -> str:
+    lat = float(request.form["lat"])
+    lng = float(request.form["lng"])
+    date = request.form["date"]
+    get_mongo_client().solar.defect.update_one(
+        {"date": date},
+        {"$set":
+             {"value.{}.latitude".format(defect_id): lat,
+              "value.{}.longitude".format(defect_id): lng}})
+    return "OK"
+
+
+@app.route("/defect/<string:defect_id>/category", methods=["POST"])
+def set_defect_category(defect_id: str) -> str:
+    date = request.form["date"]
+    category = float(request.form["category"])
+    get_mongo_client().solar.defect.update_one(
+        {"date": date},
+        {"$set": {"value.{}.category".format(defect_id): category}})
+    return "OK"
 
 
 @app.route("/images/defect")

@@ -43,6 +43,14 @@
   <!--leaflet plugin for add printer-->
   <script type="text/javascript" src="../js/leaflet.browser.print.min.js"></script>
 
+  <!--data table plugin-->
+  <link rel="stylesheet" href="../css/jquery.dataTables.min.css">
+  <script type="text/javascript" src="../js/jquery.dataTables.min.js"></script>
+
+
+  <!--font awesome-->
+  <link rel="stylesheet" href="../css/font-awesome.min.css">
+
   <!--<script type="text/javascript" src="../js/modernizr.custom.49511.js"></script>-->
   <!--<script type="text/javascript" src="../js/jquery.hotspot.min.js"></script>-->
   <!--<script type="text/javascript" src="../js/wheelzoom.js"></script>-->
@@ -176,40 +184,54 @@
       </div>
     </div>
   </div>
-  <div class="row clearfix">
-    <div class="col-md-6 column">
-      <div class="list-group">
-        <a class="list-group-item active">巡查事件<span class="badge">3</span></a>
+  <!--<div class="row clearfix">-->
+  <!--<div class="col-md-6 column">-->
+  <!--<div class="list-group">-->
+  <!--<a class="list-group-item active">巡查事件<span class="badge">3</span></a>-->
 
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0020122</a>
-        </div>
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0070692</a>
-        </div>
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0030661</a>
-        </div>
-        <a class="list-group-item active"> </a>
-      </div>
-    </div>
-    <div class="col-md-6 column">
-      <div class="list-group">
-        <a class="list-group-item active">未处理工单<span class="badge">3</span></a>
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0020122</a>-->
+  <!--</div>-->
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0070692</a>-->
+  <!--</div>-->
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0030661</a>-->
+  <!--</div>-->
+  <!--<a class="list-group-item active"> </a>-->
+  <!--</div>-->
+  <!--</div>-->
+  <!--<div class="col-md-6 column">-->
+  <!--<div class="list-group">-->
+  <!--<a class="list-group-item active">未处理工单<span class="badge">3</span></a>-->
 
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069011</a>
-        </div>
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069016</a>
-        </div>
-        <div class="list-group-item">
-          <font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069018</a>
-        </div>
-        <a class="list-group-item active"> </a>
-      </div>
-    </div>
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069011</a>-->
+  <!--</div>-->
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069016</a>-->
+  <!--</div>-->
+  <!--<div class="list-group-item">-->
+  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069018</a>-->
+  <!--</div>-->
+  <!--<a class="list-group-item active"> </a>-->
+  <!--</div>-->
+  <!--</div>-->
+  <!--</div>-->
+  <div class="row">
+    <table id="defects" class="display">
+      <thead>
+      <tr>
+        <th>事件编号</th>
+        <th>组串编号</th>
+        <th>事件状态</th>
+      </tr>
+      </thead>
+    </table>
   </div>
+
+  <div class="page-header"></div>
+
   <div class="row clearfix">
     <div class="col-md-12 column" id="layout_container">
       <div id="map" style="height: 600px;"></div>
@@ -243,25 +265,102 @@
   }).addTo(mymap);
 
   var defectMarkers = {};
-  var defectGroup = L.layerGroup().addTo(mymap)
-  var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "glyphicon"});
-  var unCheckedIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#466C95", prefix: "glyphicon"});
+  var defectGroup = L.layerGroup().addTo(mymap);
+  var cameraIcon = L.VectorMarkers.icon({icon: "camera", markerColor: "#F6F49D", prefix: "fa"});
+  var unCheckedIcon = L.VectorMarkers.icon({icon: "circle", markerColor: "#466C95", prefix: "fa"});
   //      var unCheckedIcon = L.VectorMarkers.icon({markerColor: "#466C95", iconSize: [30, 30]});
-  var defectIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#FF7676", prefix: "glyphicon"});
+  var defectIcon = L.VectorMarkers.icon({icon: "circle", markerColor: "#FF7676", prefix: "fa"});
   //      var warnIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "yellow", prefix: "glyphicon"});
-  var fineIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "#5DAE8B", prefix: "glyphicon"});
+  var fineIcon = L.VectorMarkers.icon({icon: "circle", markerColor: "#5DAE8B", prefix: "fa"});
   var imageGroup = L.layerGroup().addTo(mymap);
 
   var dragStartGps = [0.0, 0.0];
 
-  mymap.on("click", function(e){
+  mymap.on("click", function (e) {
     imageGroup.clearLayers();
   });
+
+  var defectTable = $("table#defects")
+    .DataTable({
+      "pageLength": 5,
+      "dom": "rtip",
+      "order": [[2, "asc"], [0, "asc"]],
+      "language": {
+        "sProcessing": "处理中...",
+        "sLengthMenu": "显示 _MENU_ 项结果",
+        "sZeroRecords": "没有匹配结果",
+        "sInfo": "显示第 _START_ 至 _END_ 项结果，共 _TOTAL_ 项",
+        "sInfoEmpty": "显示第 0 至 0 项结果，共 0 项",
+        "sInfoFiltered": "(由 _MAX_ 项结果过滤)",
+        "sInfoPostFix": "",
+        "sSearch": "搜索:",
+        "sUrl": "",
+        "sEmptyTable": "表中数据为空",
+        "sLoadingRecords": "载入中...",
+        "sInfoThousands": ",",
+        "oPaginate": {
+          "sFirst": "首页",
+          "sPrevious": "上页",
+          "sNext": "下页",
+          "sLast": "末页"
+        },
+        "oAria": {
+          "sSortAscending": ": 以升序排列此列",
+          "sSortDescending": ": 以降序排列此列"
+        }
+      }
+
+    });
+
+  function updateDefectTable(defectId, category) {
+    var newData;
+    switch (category) {
+      case 1:
+        newData = "<i class='fa fa-circle' style='color:#FF7676'></i>&nbsp&nbsp异常";
+        break;
+      case -1:
+        newData = "<i class='fa fa-circle' style='color:#5DAE8B'></i>&nbsp&nbsp正常";
+    }
+
+    defectTable.cell(function (idx, data, node) {
+      return data[0] === defectId
+    }, 2).data(newData);
+    defectTable.draw();
+  }
 
   $("#datetimepicker1").on("dp.change", function (e) {
     var selectedDate = e.date.format("YYYY-MM-DD");
     drawDefects(selectedDate);
+    generateDefectTable(selectedDate);
   });
+
+  function generateDefectTable(selectedDate) {
+    defectTable.clear();
+    defectTable.draw();
+    $.get("http://127.0.0.1:5000/defects", {date: selectedDate}, function (data) {
+      var defects = JSON.parse(data);
+
+      defects.forEach(function (defect) {
+        var rowData = [];
+        rowData.push(defect.defectId);
+        rowData.push(defect.groupId);
+//        rowData.push($("<i>", {"class": "fa fa-circle", style: "color:blue"})[0].outerHTML);
+        switch (defect.category) {
+          case 0:
+            rowData.push("<i class='fa fa-circle' style='color:#466C95'></i>&nbsp&nbsp疑似");
+            break;
+          case 1:
+            rowData.push("<i class='fa fa-circle' style='color:#FF7676'></i>&nbsp&nbsp异常");
+            break;
+          case -1:
+            rowData.push("<i class='fa fa-circle' style='color:#5DAE8B'></i>&nbsp&nbsp正常");
+        }
+
+        defectTable.row.add(rowData);
+      });
+      defectTable.draw();
+    });
+  }
 
   function drawDefects(selectedDate) {
     defectMarkers = {};
@@ -272,15 +371,27 @@
 
       for (var i = 0; i < defects.length; i++) {
         var defect = defects[i];
+
         defectMarkers[defect.defectId] =
-          L.marker([defect.latitude, defect.longitude], {icon: unCheckedIcon, draggable: true}).addTo(mymap);
+          L.marker([defect.latitude, defect.longitude], {draggable: true}).addTo(mymap);
+
+        switch (defect.category) {
+          case 0:
+            defectMarkers[defect.defectId].setIcon(unCheckedIcon);
+            break;
+          case 1:
+            defectMarkers[defect.defectId].setIcon(defectIcon);
+            break;
+          case -1:
+            defectMarkers[defect.defectId].setIcon(fineIcon);
+        }
+
         defectGroup.addLayer(defectMarkers[defect.defectId]);
       }
 
       defects.forEach(function (defect) {
         defectMarkers[defect.defectId].on("contextmenu", function () {
           var that = $(this)[0];
-          console.log(that);
           var popup = L.popup({offset: [0, -30]}).setLatLng(that.getLatLng());
           var $div = $("<div>");
           $div.append($("<p>").append("组串编号: 000000"));
@@ -289,12 +400,24 @@
           $confirmButton.on("click", function () {
             that.setIcon(defectIcon);
             popup.remove();
+            $.post("http://127.0.0.1:5000/defect/" + defect.defectId + "/category", {
+              date: selectedDate,
+              category: 1
+            }, function () {
+              updateDefectTable(defect.defectId, 1);
+            });
           });
           $div.append($confirmButton);
           var $cancelButton = $("<button>", {type: "button", "class": "btn btn-success btn-sm"}).append("取消警报");
           $cancelButton.on("click", function () {
             that.setIcon(fineIcon);
             popup.remove();
+            $.post("http://127.0.0.1:5000/defect/" + defect.defectId + "/category", {
+              date: selectedDate,
+              category: -1
+            }, function () {
+              updateDefectTable(defect.defectId, -1);
+            });
           });
           $div.append($cancelButton);
           popup.setContent($div[0]).openOn(mymap);
@@ -364,12 +487,14 @@
           var r = confirm("确认移动异常点至该位置？\n如果确认，该移动信息将用于改善定位服务。");
           if (r === false) {
             this.setLatLng(dragStartGps);
+          } else {
+            $.post("http://127.0.0.1:5000/defect/" + defect.defectId + "/position",
+              {lat: this.getLatLng().lat, lng: this.getLatLng().lng, date: selectedDate});
           }
         })
       })
     })
   }
-
 
 
 </script>
