@@ -8,4 +8,6 @@ fi
 
 python init.py
 
+cp /var/www/html/data/panorama.png /var/www/html/img/panorama.png
+
 exec "$@"

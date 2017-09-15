@@ -27,9 +27,10 @@ services:
         environment:
             - UI_MAP={$UI_DATA}/{$UI_MAP}
             - IMAGE_PATH={$IMAGE_PATH}
-            - GPS_CENTER="{$GPS_CENTER}"
-            - GPS_TOP="{$GPS_TOP}"
-            - GPS_BOTTOM="{$GPS_BOTTOM}"
+            - GPS_CENTER={$GPS_CENTER}
+            - GPS_TOP={$GPS_TOP}
+            - GPS_BOTTOM={$GPS_BOTTOM}
+            - HOST={$HOST}
         ports:
             - "8090:80"
         links:
