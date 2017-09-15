@@ -14,7 +14,7 @@
 
   <!--import bootstap datetimepricker plugin-->
   <link rel="stylesheet" href="../css/bootstrap-datetimepicker.min.css">
-  <script type="text/javascript" src="../js/moment.js"></script>
+  <script type="text/javascript" src="../js/moment-with-locales.js"></script>
   <script type="text/javascript" src="../js/bootstrap-datetimepicker.js"></script>
 
   <!--import bootstrap selectize plugin-->
@@ -108,11 +108,11 @@
 
           <ul class="nav navbar-nav navbar-right">
             <li class="dropdown">
-              <form class="navbar-form navbar-left" role="search">
+              <form class="navbar-form navbar-left" onsubmit="return false;">
                 <div class="form-group">
-                  <input type="text" class="form-control"/>
+                  <input type="text" class="form-control" id="searchContent" onchange="searchDefect();"/>
                 </div>
-                <button type="submit" class="btn btn-default">查询</button>
+                <button type="button" class="btn btn-default" id="searchButton", onclick="searchDefect();">查询</button>
               </form>
             </li>
             <li>
@@ -139,7 +139,8 @@
       $(function () {
         $('#datetimepicker1').datetimepicker(
           {
-            format: 'YYYY-MM-DD'
+            format: 'YYYY-MM-DD',
+            locale: "zh-CN"
           }
         );
       });
@@ -273,7 +274,7 @@
   //      var warnIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "yellow", prefix: "glyphicon"});
   var fineIcon = L.VectorMarkers.icon({icon: "circle", markerColor: "#5DAE8B", prefix: "fa"});
   var imageGroup = L.layerGroup().addTo(mymap);
-
+  var activeCircle = L.circle([0.0, 0.0], {radius: 5}).addTo(mymap);
   var dragStartGps = [0.0, 0.0];
 
   mymap.on("click", function (e) {
@@ -295,7 +296,7 @@
         "sInfoPostFix": "",
         "sSearch": "搜索:",
         "sUrl": "",
-        "sEmptyTable": "表中数据为空",
+        "sEmptyTable": "无事件记录",
         "sLoadingRecords": "载入中...",
         "sInfoThousands": ",",
         "oPaginate": {
@@ -326,6 +327,11 @@
       return data[0] === defectId
     }, 2).data(newData);
     defectTable.draw();
+  }
+
+  function searchDefect(){
+    var keyword = $("input#searchContent").val();
+    defectTable.search(keyword).draw();
   }
 
   $("#datetimepicker1").on("dp.change", function (e) {
@@ -360,6 +366,15 @@
       });
       defectTable.draw();
     });
+  }
+
+  defectTable.on("click", "tr", function(){
+    var data = defectTable.row(this).data();
+    activateMarker(defectMarkers[data[0]]);
+  });
+
+  function activateMarker(marker){
+    activeCircle.setLatLng(marker.getLatLng());
   }
 
   function drawDefects(selectedDate) {
@@ -425,6 +440,7 @@
 
         defectMarkers[defect.defectId].on("click", function () {
           imageGroup.clearLayers();
+          activateMarker(this);
           var cameraMarkers = [];
 //        $.get("http://159.99.234.54:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
           $.get("http://{$HOST}:5000/images/defect", {
