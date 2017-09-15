@@ -1,3 +1,4 @@
+from io import open
 import os
 from os import remove
 from os.path import isfile
@@ -16,7 +17,7 @@ def get_conf():
 if __name__ == '__main__':
     conf = get_conf()
 
-    path = 'html/index1.html'
+    path = 'html/index.html'
     if isfile(path):
         remove(path)
 
