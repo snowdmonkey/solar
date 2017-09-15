@@ -184,7 +184,7 @@ def batch_process_label(folder_path: str) -> dict:
     return rect_dict
 
 
-def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float) -> dict:
+def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float, group_criteria: float) -> dict:
     """
     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
     defects to a json file folder_path/defects.json. This function is also try to unify those defects that very close
@@ -193,6 +193,8 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
     :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
     of the same amount of the physical distance
+    :param group_criteria: the distance criteria of grouping the defects, the distance is represented by the numebr of
+    pixels on large map
     :return: dict of {defect_id: {lat, lon, x, y, category, image: [rects]}}
     """
 
@@ -229,7 +231,8 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
 #     grouping the defects according to pixel distance on the stitched image
     pixel_location_table = np.array([[x.get("x_large_image"), x.get("y_large_image")] for x in defects])
     linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
-    ctree = cut_tree(linkage_matrix, height=[5])
+
+    ctree = cut_tree(linkage_matrix, height=[group_criteria])
     cluster = np.array([x[0] for x in ctree])
     cluster_centroids = list()
     for i in range(max(cluster)+1):
