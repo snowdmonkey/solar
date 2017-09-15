@@ -62,9 +62,10 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
         logger.info("Processing exif informaion of file %s", file_name)
 
         base_name = os.path.splitext(basename(file_name))[0]
-        command = 'exiftool -j -c "%+.10f" '
         file_path = join(folder_path, file_name)
-        proc = subprocess.run(command + file_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        command = ['exiftool', "-j", "-c", "%+.10f", file_path]
+
+        proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         out = proc.stdout
         r_json = json.loads(out.decode("utf-8"))[0]
         exif[base_name] = dict()
