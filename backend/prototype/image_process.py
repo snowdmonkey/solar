@@ -29,10 +29,9 @@ class ImageProcessPipeline:
 
     @staticmethod
     def _get_geo_mapper() -> GeoMapper:
-        panorama_folder = os.getenv("BG_PATH")
-        file_names = os.listdir(panorama_folder)
-        if "panorama.tif" in file_names:
-            panorama_path = join(panorama_folder, "panorama.tif")
+        panorama_path = os.getenv("BG_PATH")
+
+        if os.path.isfile(panorama_path):
             geo_mapper = TifGeoMapper(panorama_path)
             return geo_mapper
         else:  # testing purpose only
