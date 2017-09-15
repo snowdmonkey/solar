@@ -274,7 +274,7 @@
   //      var warnIcon = L.VectorMarkers.icon({icon: "certificate", markerColor: "yellow", prefix: "glyphicon"});
   var fineIcon = L.VectorMarkers.icon({icon: "circle", markerColor: "#5DAE8B", prefix: "fa"});
   var imageGroup = L.layerGroup().addTo(mymap);
-
+  var activeCircle = L.circle([0.0, 0.0], {radius: 5}).addTo(mymap);
   var dragStartGps = [0.0, 0.0];
 
   mymap.on("click", function (e) {
@@ -368,6 +368,15 @@
     });
   }
 
+  defectTable.on("click", "tr", function(){
+    var data = defectTable.row(this).data();
+    activateMarker(defectMarkers[data[0]]);
+  });
+
+  function activateMarker(marker){
+    activeCircle.setLatLng(marker.getLatLng());
+  }
+
   function drawDefects(selectedDate) {
     defectMarkers = {};
     defectGroup.clearLayers();
@@ -431,6 +440,7 @@
 
         defectMarkers[defect.defectId].on("click", function () {
           imageGroup.clearLayers();
+          activateMarker(this);
           var cameraMarkers = [];
 //        $.get("http://159.99.234.54:5000/images/defect", {date: "2017-06-21", defectId: defect.defectId}, function (data) {
           $.get("http://127.0.0.1:5000/images/defect", {
