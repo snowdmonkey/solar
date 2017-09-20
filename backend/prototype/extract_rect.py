@@ -93,13 +93,15 @@ class PanelCropper:
         return sub_imgs
 
     def get_panels(self, min_area: int = 100, max_area: int = 1000, n_vertices_threshold: int = 6,
-                   approx_threshold: int = 2) -> List:
+                   approx_threshold: int = 2, min_panel_group_area: int = 2000) -> List:
         """
         get the solar panels from the image
         :param min_area: the minimum area of a panel in unit of pixels
         :param max_area: the maximum area of a panel in unit of pixels
         :param n_vertices_threshold: the maximum number of vertices of a panel
         :param approx_threshold: threshold when call cv.approxPolyDP to verify whether an area is a rectangle
+        :param min_panel_group_area: if the area of sub image is smaller than this many pixels, it is not considers as
+        a panel group
         :return: list of sub images, each sub image contains a panel
         """
         img = self.raw_img
@@ -138,8 +140,9 @@ class PanelCropper:
         # corner_groups = np.array(corner_groups)
         group_contours = [cv2.convexHull(x) for x in corner_groups]
         for cnt in group_contours:
-            masked_image = get_masked_image(blur, [cnt])
-            sub_imgs.append(masked_image)
+            if cv2.contourArea(cnt) > min_panel_group_area:
+                masked_image = get_masked_image(blur, [cnt])
+                sub_imgs.append(masked_image)
 
         return sub_imgs
 

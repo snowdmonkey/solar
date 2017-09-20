@@ -140,7 +140,8 @@ def batch_process_label(folder_path: str) -> dict:
         panel_cropper = PanelCropper(file_path)
         # sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000, max_area=21500,
         #                                       verify_rectangle=10, n_vertices_threshold=8)
-        sub_imgs = panel_cropper.get_panels(min_area=100, max_area=1000, n_vertices_threshold=6, approx_threshold=2)
+        sub_imgs = panel_cropper.get_panels(min_area=100, max_area=1000, n_vertices_threshold=6, approx_threshold=2,
+                                            min_panel_group_area=2000)
         if len(sub_imgs) == 0:
             continue
 
