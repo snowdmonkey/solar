@@ -156,7 +156,7 @@ def batch_process_label(folder_path: str) -> dict:
                 mask[tuple(point)] = 255
 
             _, contours, h = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 10]
+            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
 
             if len(contours) == 0:
                 continue
