@@ -61,6 +61,67 @@
 
 <div class="container">
     <div class="row clearfix">
+        <div class="col-md-3">
+            <div class="pagination form-group">
+                <div class="input-group date" id="datetimepicker1">
+                    <input type="text" class="form-control">
+                    <span class="input-group-addon">
+            <span class="glyphicon glyphicon-calendar"></span>
+          </span>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            $(function () {
+                $('#datetimepicker1').datetimepicker(
+                    {
+                        format: 'YYYY-MM-DD',
+                        locale: "zh-CN"
+                    }
+                );
+            });
+        </script>
+        <div class="col-md-9">
+            <div>
+                <ul class="pagination">
+                    <li>
+                        <a href="#">前一日</a>
+                    </li>
+                    <li>
+                        <a href="#">6月20日</a>
+                    </li>
+                    <li>
+                        <a href="#">6月21日</a>
+                    </li>
+                    <li>
+                        <a>6月22日</a>
+                    </li>
+                    <li>
+                        <a>6月23日</a>
+                    </li>
+                    <li>
+                        <a>6月24日</a>
+                    </li>
+                    <li>
+                        <a>7月12日</a>
+                    </li>
+                    <li>
+                        <a>7月30日</a>
+                    </li>
+                    <li>
+                        <a>8月10日</a>
+                    </li>
+                    <li>
+                        <a>8月15日</a>
+                    </li>
+                    <li>
+                        <a href="#">后一日</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="row clearfix">
         <div class="col-md-12 column" id="layout_container">
             <div id="map" style="height: 600px;"></div>
             <div class="panel-footer"></div>
