@@ -138,15 +138,16 @@ def batch_process_label(folder_path: str) -> dict:
         base_name = os.path.splitext(basename(file_name))[0]
         file_path = join(rotate_folder_path, file_name)
         panel_cropper = PanelCropper(file_path)
-        sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000,
-                                              verify_rectangle=10, n_vertices_threshold=8)
+        # sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000, max_area=21500,
+        #                                       verify_rectangle=10, n_vertices_threshold=8)
+        sub_imgs = panel_cropper.get_panels(min_area=100, max_area=1000, n_vertices_threshold=6, approx_threshold=2)
         if len(sub_imgs) == 0:
             continue
 
         else:
             points = list()
             for img in sub_imgs:
-                hot_spot_detector = HotSpotDetector(img, 3.0)
+                hot_spot_detector = HotSpotDetector(img, 4.0)
                 hot_spot = hot_spot_detector.get_hot_spot()
                 points.extend(hot_spot.points)
 
@@ -155,7 +156,7 @@ def batch_process_label(folder_path: str) -> dict:
                 mask[tuple(point)] = 255
 
             _, contours, h = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 2]
+            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
 
             if len(contours) == 0:
                 continue
@@ -184,7 +185,7 @@ def batch_process_label(folder_path: str) -> dict:
     return rect_dict
 
 
-def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float) -> dict:
+def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float, group_criteria: float) -> dict:
     """
     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
     defects to a json file folder_path/defects.json. This function is also try to unify those defects that very close
@@ -193,6 +194,8 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
     :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
     of the same amount of the physical distance
+    :param group_criteria: the distance criteria of grouping the defects, the distance is represented by the numebr of
+    pixels on large map
     :return: dict of {defect_id: {lat, lon, x, y, category, image: [rects]}}
     """
 
@@ -229,7 +232,8 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
 #     grouping the defects according to pixel distance on the stitched image
     pixel_location_table = np.array([[x.get("x_large_image"), x.get("y_large_image")] for x in defects])
     linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
-    ctree = cut_tree(linkage_matrix, height=[5])
+
+    ctree = cut_tree(linkage_matrix, height=[group_criteria])
     cluster = np.array([x[0] for x in ctree])
     cluster_centroids = list()
     for i in range(max(cluster)+1):
@@ -264,28 +268,22 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
 
 
 if __name__ == '__main__':
-    # of = open('C:\\SolarPanel\\2017-06-20\\exif.csv', 'w')
-    # load_images('C:\\SolarPanel\\2017-06-20\\6-20-DJI', True, of)
-    # load_images('C:\\SolarPanel\\2017-06-20\\6-20-FLIR', False, of)
-    # of.close()
-    # of = open('C:\\SolarPanel\\2017-06-21\\exif.csv', 'w')
-    # load_images('C:\\SolarPanel\\2017-06-21\\6-21-FLIR', False, of)
-    # of.close()
-    # of = open('C:\\SolarPanel\\2017-07-04\\exif.csv', 'w')
-    # load_images('C:\\SolarPanel\\2017-07-04\\7-04-1', True, of)
-    # load_images('C:\\SolarPanel\\2017-07-04\\7-04-2', True, of)
-    # of.close()
-    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\2017-06-21\ir"
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    folder_path = r"C:\Users\h232559\Desktop\15m"
 
     # batch_process_label(folder_path=folder_path)
+    #
+    # pixel_anchors = [[639, 639], [639, 1328], [639, 2016],
+    #                  [1358, 639], [1358, 1328], [1358, 2016],
+    #                  [2076, 639], [2076, 1328], [2076, 2016]]
+    # gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
+    #                [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
+    #                [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
+    #
+    # geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+    # batch_process_exif(folder_path)
+    # batch_process_rotation(folder_path)
+    batch_process_label(folder_path)
 
-    pixel_anchors = [[639, 639], [639, 1328], [639, 2016],
-                     [1358, 639], [1358, 1328], [1358, 2016],
-                     [2076, 639], [2076, 1328], [2076, 2016]]
-    gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
-                   [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
-                   [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
-
-    geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-
-    batch_process_locate(folder_path, geo_mapper, 5.3793)
+    # batch_process_locate(folder_path, geo_mapper, 5.3793)

@@ -19,5 +19,4 @@ def get_tif_coordinates(tif_path: str):
     return center_gps, top_gps, bottom_gps
 
 if __name__ == "__main__":
-
-    print(get_tif_coordinates(r"C:\Users\h232559\Desktop\odm_orthophoto.tif"))
+    print(get_tif_coordinates(r"C:\Users\h232559\Desktop\myProject2_transparent_mosaic_group1.tif"))

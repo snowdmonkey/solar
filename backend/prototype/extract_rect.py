@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from typing import List
+from scipy.cluster.hierarchy import linkage, cut_tree
 
 
 def crop_and_rotate(img, cnt):
@@ -8,7 +10,7 @@ def crop_and_rotate(img, cnt):
     rect = cv2.minAreaRect(cnt)
     dst = rotate_and_scale(masked_image, rect[2])
     ii = np.where(dst != 0)
-    corp_img = dst[min(ii[0]): (max(ii[0])+1), min(ii[1]): (max(ii[1])+1)]
+    corp_img = dst[min(ii[0]): (max(ii[0]) + 1), min(ii[1]): (max(ii[1]) + 1)]
     return corp_img
 
 
@@ -42,20 +44,19 @@ def rotate_and_scale(img, degree, scale_factor=1.0):
 
 
 class PanelCropper:
-
     def __init__(self, pic_path):
         self.raw_img = cv2.imread(pic_path, 0)
-        # self.raw_img = cv2.blur(self.raw_img, (3, 3))
+        self.blur_img = cv2.blur(self.raw_img, (3, 3))
         self.binary_seg = None
         self.contours = None
 
     def _cal_binary_seg(self):
-        _, th = cv2.threshold(self.raw_img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        _, th = cv2.threshold(self.raw_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         self.binary_seg = th
 
-    def _cal_contours(self, min_area=500):
+    def _cal_contours(self, min_area, max_area):
         _, contours, h = cv2.findContours(self.binary_seg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        self.contours = [x for x in contours if cv2.contourArea(x) >= min_area]
+        self.contours = [x for x in contours if min_area <= cv2.contourArea(x) <= max_area]
 
     def _verify_rectangle(self, poly_threshold=10, n_vertices_threshold=6):
         """
@@ -70,12 +71,13 @@ class PanelCropper:
         n_vertices = [len(x) for x in approx]
         self.contours = [self.contours[i] for i in range(len(self.contours)) if n_vertices[i] <= n_vertices_threshold]
 
-    def get_sub_imgs(self, rotate_n_crop=False, min_area=500, verify_rectangle=-1, n_vertices_threshold=6):
+    def get_sub_imgs(self, rotate_n_crop=False, min_area=500, max_area=86000, verify_rectangle=-1,
+                     n_vertices_threshold=6):
         if self.binary_seg is None:
             self._cal_binary_seg()
         # if self.contours is None:
         #     self.get_contours()
-        self._cal_contours(min_area=min_area)
+        self._cal_contours(min_area=min_area, max_area=max_area)
 
         if verify_rectangle >= 0:
             self._verify_rectangle(verify_rectangle, n_vertices_threshold)
@@ -88,6 +90,57 @@ class PanelCropper:
                 sub_imgs.append(corp_img)
             else:
                 sub_imgs.append(masked_image)
+        return sub_imgs
+
+    def get_panels(self, min_area: int = 100, max_area: int = 1000, n_vertices_threshold: int = 6,
+                   approx_threshold: int = 2) -> List:
+        """
+        get the solar panels from the image
+        :param min_area: the minimum area of a panel in unit of pixels
+        :param max_area: the maximum area of a panel in unit of pixels
+        :param n_vertices_threshold: the maximum number of vertices of a panel
+        :param approx_threshold: threshold when call cv.approxPolyDP to verify whether an area is a rectangle
+        :return: list of sub images, each sub image contains a panel
+        """
+        img = self.raw_img
+        blur = self.blur_img
+        imgf = np.float32(img)
+        mu = cv2.blur(imgf, (3, 3))
+        mu2 = cv2.blur(imgf*imgf, (3, 3))
+        sigma = np.sqrt(mu2 - mu * mu)
+        _, th1 = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _, th2 = cv2.threshold(np.uint8(sigma), 2, 255, cv2.THRESH_BINARY_INV)
+        th1[th2 == 0] = 0
+        _, contours, h = cv2.findContours(th1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        sub_imgs = list()
+        corners = list()
+        for cnt in contours:
+            if cv2.contourArea(cnt) < 100 or cv2.contourArea(cnt) > 1000:
+                continue
+            approx = cv2.approxPolyDP(cnt, approx_threshold, True)
+            if len(approx) > 8:
+                continue
+            x, y, w, h = cv2.boundingRect(cnt)
+            # mask = np.zeros_like(img)
+            # mask[y:(y+h), x:(x+w)] = blur[y:(y+h), x:(x+w)]
+            # sub_imgs.append(mask)
+            corners.extend([[i, j] for i in range(x, x + w, 5) for j in range(y, y + h, 5)])
+            corners.extend([[x, y + h], [x + w, y], [x + w, y + h]])
+        if len(corners) == 0:
+            return sub_imgs
+        linkage_matrix = linkage(np.array(corners), method="single", metric="chebyshev")
+        ctree = cut_tree(linkage_matrix, height=[10])
+        cluster = [x[0] for x in ctree]
+        corner_groups = list()
+        for group in range(max(cluster) + 1):
+            corner_group = [corners[i] for i in range(len(corners)) if cluster[i] == group]
+            corner_groups.append(np.array(corner_group))
+        # corner_groups = np.array(corner_groups)
+        group_contours = [cv2.convexHull(x) for x in corner_groups]
+        for cnt in group_contours:
+            masked_image = get_masked_image(blur, [cnt])
+            sub_imgs.append(masked_image)
+
         return sub_imgs
 
     def get_plate_part(self, min_area=500):
@@ -109,7 +162,7 @@ def main():
     n_col = 3
     plt.figure()
     for i in range(n):
-        plt.subplot(n_row, n_col, i+1)
+        plt.subplot(n_row, n_col, i + 1)
         plt.imshow(sub_imgs[i], cmap='gray')
     plt.show()
     #
@@ -120,4 +173,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

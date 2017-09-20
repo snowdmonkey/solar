@@ -80,9 +80,11 @@ class ImageProcessPipeline:
     def _process_locate(self):
         self.logger.info("starts to process defects locating")
         pixel_ratio = self._get_pixel_ratio()
+        group_criteria = 200 / float(os.getenv("GSD_PANORAMA"))
         defect_dict = batch_process_locate(folder_path=join(self._image_folder, "ir"),
                                            geo_mapper=self._geo_mapper,
-                                           pixel_ratio=pixel_ratio)
+                                           pixel_ratio=pixel_ratio,
+                                           group_criteria=group_criteria)
         results = dict()
         results["date"] = self._date
         results["value"] = defect_dict
