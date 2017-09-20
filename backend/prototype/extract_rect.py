@@ -125,6 +125,7 @@ class PanelCropper:
             # mask[y:(y+h), x:(x+w)] = blur[y:(y+h), x:(x+w)]
             # sub_imgs.append(mask)
             corners.extend([[i, j] for i in range(x, x + w, 5) for j in range(y, y + h, 5)])
+            corners.extend([[x, y + h], [x + w, y], [x + w, y + h]])
         if len(corners) == 0:
             return sub_imgs
         linkage_matrix = linkage(np.array(corners), method="single", metric="chebyshev")
