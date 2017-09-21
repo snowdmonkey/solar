@@ -9,10 +9,9 @@ import sys
 import os
 
 
-
 class ImageProcessPipeline:
     """
-    this class provides the whole pipeline of process a folder of images. The folder should typically be IMG/{date}
+    this class provides the whole pipeline of process a folder of images. The folder should typically be IMG_ROOT/{date}
     """
 
     def __init__(self, image_folder: str, date: str):

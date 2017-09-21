@@ -5,6 +5,7 @@ from detect_hotspot import HotSpotDetector
 from geomapping.geo_mapper import GeoMapper, AnchorGeoMapper
 from scipy.cluster.hierarchy import linkage, cut_tree
 from defect_category import DefectCategory
+from typing import Union
 import os
 import subprocess
 # import exifread
@@ -14,7 +15,7 @@ import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 
 
 # def convert_gps(gps_info):
@@ -81,7 +82,7 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
     return exif
 
 
-def batch_process_rotation(folder_path, exif_path=None):
+def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None):
     """
     the function will create a sub folder under folder_path which contains the rotated images. And the images under
     folder path will be rotated so they will all head north. And the degrees for rotate each image should be provided

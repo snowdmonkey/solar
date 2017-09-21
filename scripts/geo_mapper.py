@@ -4,6 +4,7 @@ from pyproj import Proj
 import subprocess
 import json
 import re
+import gdal
 
 
 class GeoMapper(ABC):
@@ -91,7 +92,11 @@ class TifGeoMapper(GeoMapper):
         r_json = json.loads(out.decode("utf-8"))[0]
         project_str = r_json.get("ProjectedCSType")
         origin_str = r_json.get("ModelTiePoint")
-        zone = int(re.search("zone [0-9]+", project_str).group(0).split(" ")[1])
+        if project_str is not None:
+            zone = int(re.search("zone [0-9]+", project_str).group(0).split(" ")[1])
+        else:
+            dataset = gdal.Open(tif_path)
+            zone = int(re.search("UTM zone [0-9]+", dataset.GetProjection()).group(0).split(" ")[-1])
         self._x_origin = float(origin_str.split(" ")[3])
         self._y_origin = float(origin_str.split(" ")[4])
         self._x_pixel_scale = float(r_json.get("PixelScale").split(" ")[0])
