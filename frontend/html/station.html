@@ -135,14 +135,14 @@
     var mymap = L.map("map", {
         fullscreenControl: true,
         fullscreenControlOptions: {position: "topleft"}
-    }).setView([36.65692021632644,117.23242357750422], 18);
+    }).setView([36.65861713209903, 117.22974398716559], 18);
     L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 21, minZoom: 5}).addTo(mymap);
     L.imageOverlay("../img/panorama.png",
-        [[36.65861713209904,117.22974398716559], [36.65522339790183,117.23510285534248]]).addTo(mymap);
+        [[36.6551991831705, 117.2324184458665], [36.65178133341483, 117.23509227307021]]).addTo(mymap);
 
     var osm2 = L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 16, minZoom: 0});
     var imageOverlay2 = L.imageOverlay("../img/panorama.png",
-        [[36.65861713209904,117.22974398716559], [36.65522339790183,117.23510285534248]]);
+        [[36.6551991831705, 117.2324184458665], [36.65178133341483, 117.23509227307021]]);
     var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
     L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
 

@@ -1,4 +1,5 @@
 from geo_mapper import TifGeoMapper
+import sys
 
 
 def get_tif_coordinates(tif_path: str):
@@ -18,5 +19,9 @@ def get_tif_coordinates(tif_path: str):
 
     return center_gps, top_gps, bottom_gps
 
+
 if __name__ == "__main__":
-    print(get_tif_coordinates(r"C:\Users\h232559\Desktop\myProject2_transparent_mosaic_group1.tif"))
+    results = get_tif_coordinates(sys.argv[1])
+    print("top left corner GPS: {}".format(results[0]))
+    print("center corner GPS: {}".format(results[1]))
+    print("bottom right corner GPS: {}".format(results[2]))
