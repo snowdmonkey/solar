@@ -22,6 +22,6 @@ def get_tif_coordinates(tif_path: str):
 
 if __name__ == "__main__":
     results = get_tif_coordinates(sys.argv[1])
-    print("top left corner GPS: {}".format(results[0]))
-    print("center corner GPS: {}".format(results[1]))
+    print("center corner GPS: {}".format(results[0]))
+    print("top left corner GPS: {}".format(results[1]))
     print("bottom right corner GPS: {}".format(results[2]))
