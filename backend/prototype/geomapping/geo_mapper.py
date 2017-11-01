@@ -142,6 +142,68 @@ class TifGeoMapper(GeoMapper):
         return row, col
 
 
+class UTMGeoMapper(GeoMapper):
+
+    def __init__(self, gsd: float, origin: Tuple[int, int], utm_zone: int, origin_pixel: Tuple[int, int] = (0, 0)):
+        """
+        this geomapper is based on a UTM transformation
+        :param gsd: ground sample distance, in meters
+        :param origin: the utm coordinates of the origin pixel, in meters
+        :param utm_zone: UTM zone of our projector
+        :param origin_pixel: pixel corresponding to origin, default to be the top left corner, (row, col) format
+        """
+        self._gsd = gsd
+        self._origin = origin
+        self._origin_pixel = origin_pixel
+        self._projector = Proj(proj="utm", zone=utm_zone, ellps="WGS84")
+
+    def pixel2utm(self, row: int, col: int) -> Tuple[float, float]:
+        """
+        take in a pixel position and return utm coordinates
+        :param row: pixel row position
+        :param col: pixel col position
+        :return: corresponding utm coordinate in (x, y) format
+        """
+        x = self._origin[0] + (col - self._origin_pixel[1]) * self._gsd
+        y = self._origin[1] - (row - self._origin_pixel[0]) * self._gsd
+        return x, y
+
+    def utm2pixel(self, x: float, y: float) -> Tuple[int, int]:
+        """
+        take in a pair of utm coordinates and return pixel position
+        :param x: northern of the utm coordinates
+        :param y: eastern of the utm coordinates
+        :return: pixel position in form of (row, col)
+        """
+        row = self._origin_pixel[0] - (y - self._origin[1]) / self._gsd
+        col = self._origin_pixel[1] + (x - self._origin[0]) / self._gsd
+        row = int(row)
+        col = int(col)
+        return row, col
+
+    def pixel2gps(self, row: int, col: int) -> Tuple[float, float]:
+        """
+        take in pixel location (counting from 0) and output gps coordinates
+        :param row: row index
+        :param col: col index
+        :return: gps coordinates
+        """
+        x, y = self.pixel2utm(row, col)
+        lng, lat = self._projector(x, y, inverse=True)
+        return lat, lng
+
+    def gps2pixel(self, latitude: float, longitude: float) -> Tuple[int, int]:
+        """
+        take in gps coordinates and output pixel location (counting from 0)
+        :param latitude:
+        :param longitude:
+        :return: pixel location
+        """
+        x, y = self._projector(longitude, latitude)
+        row, col = self.utm2pixel(x, y)
+        return row, col
+
+
 def main():
     # pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
     #                  [1358, 639], [1358, 1328], [1358, 2016],
