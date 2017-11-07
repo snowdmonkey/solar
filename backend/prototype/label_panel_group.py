@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Mapping, List
+from typing import Tuple, Dict, List
 from scipy.cluster.hierarchy import linkage, cut_tree
 import numpy as np
 import cv2
@@ -9,7 +9,7 @@ import sys
 class PanelGroupLabeler(ABC):
 
     @abstractmethod
-    def process_image(self, img_path: str) -> Mapping[str, List[Tuple[int, int]]]:
+    def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
         """
         process a given image
         :param img_path:
@@ -21,7 +21,7 @@ class PanelGroupLabeler(ABC):
 
 class ColorBasedLabeler(PanelGroupLabeler):
 
-    def process_image(self, img_path: str) -> Mapping[str, List[Tuple[int, int]]]:
+    def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
         """
         process a given image
         :param img_path:
@@ -33,7 +33,7 @@ class ColorBasedLabeler(PanelGroupLabeler):
         blue_scale = self._convert_blue_scale(raw_image)
         _, th = cv2.threshold(blue_scale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         _, contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = [x for x in contours if cv2.contourArea(x) > 100]
+        contours = [x for x in contours if cv2.contourArea(x) > 10000]
         for i in range(len(contours)):
             cnt = contours[i]
             x, y, w, h = cv2.boundingRect(cnt)
@@ -71,7 +71,7 @@ def main():
     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
     for k, v in result.items():
-        cv2.rectangle(img, (v[0][1], v[0][0]), (v[3][1], v[3][0]), (0, 255, 0), 2)
+        cv2.rectangle(img, (v[0][1], v[0][0]), (v[2][1], v[2][0]), (0, 255, 0), 2)
 
     cv2.imwrite("labeled.png", img)
 

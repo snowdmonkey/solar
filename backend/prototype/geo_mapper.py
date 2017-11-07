@@ -144,7 +144,7 @@ class TifGeoMapper(GeoMapper):
 
 class UTMGeoMapper(GeoMapper):
 
-    def __init__(self, gsd: float, origin: Tuple[int, int], utm_zone: int, origin_pixel: Tuple[int, int] = (0, 0)):
+    def __init__(self, gsd: float, origin: Tuple[float, float], utm_zone: int, origin_pixel: Tuple[int, int] = (0, 0)):
         """
         this geomapper is based on a UTM transformation
         :param gsd: ground sample distance, in meters

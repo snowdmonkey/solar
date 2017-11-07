@@ -185,40 +185,7 @@
       </div>
     </div>
   </div>
-  <!--<div class="row clearfix">-->
-  <!--<div class="col-md-6 column">-->
-  <!--<div class="list-group">-->
-  <!--<a class="list-group-item active">巡查事件<span class="badge">3</span></a>-->
 
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0020122</a>-->
-  <!--</div>-->
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0070692</a>-->
-  <!--</div>-->
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">组串标号#0030661</a>-->
-  <!--</div>-->
-  <!--<a class="list-group-item active"> </a>-->
-  <!--</div>-->
-  <!--</div>-->
-  <!--<div class="col-md-6 column">-->
-  <!--<div class="list-group">-->
-  <!--<a class="list-group-item active">未处理工单<span class="badge">3</span></a>-->
-
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069011</a>-->
-  <!--</div>-->
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069016</a>-->
-  <!--</div>-->
-  <!--<div class="list-group-item">-->
-  <!--<font size="4" color="black">&bull;&nbsp;&nbsp;</font><a href="#">工单编号#0069018</a>-->
-  <!--</div>-->
-  <!--<a class="list-group-item active"> </a>-->
-  <!--</div>-->
-  <!--</div>-->
-  <!--</div>-->
   <div class="row">
     <table id="defects" class="display">
       <thead>
@@ -247,16 +214,35 @@
   var mymap = L.map("map", {
     fullscreenControl: true,
     fullscreenControlOptions: {position: "topleft"}
-  }).setView([33.58873250, 119.6334535], 18);
+  }).setView([36.6551991831705, 117.2324184458665], 18);
   L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 21, minZoom: 5}).addTo(mymap);
-  L.imageOverlay("../img/panorama.png",
-    [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]).addTo(mymap);
+//  L.imageOverlay("../img/panorama.png",
+//    [[36.65861713209903, 117.22974398716559], [36.65178133341483, 117.23509227307021]]).addTo(mymap);
+
+  $.get("../img/tiles/position.json", function(data){
+    data.forEach(function(datum){
+      L.imageOverlay("../img/tiles/"+datum.id+".png",
+        [[datum.p1.lat, datum.p1.lng], [datum.p2.lat, datum.p2.lng]]).addTo(mymap);
+    })
+  });
 
   var osm2 = L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 16, minZoom: 0});
   var imageOverlay2 = L.imageOverlay("../img/panorama.png",
-    [[33.585694321877583, 119.63701667124482], [33.591771424236896, 119.6298894339357]]);
+    [[36.65861713209903, 117.22974398716559], [36.65178133341483, 117.23509227307021]]);
   var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
   L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
+
+  $.get("http://127.0.0.1:5000/panel_group", function(data){
+    data.forEach(function(panelGroup){
+      var corners = panelGroup.corners;
+      var latlngs = [];
+      corners.forEach(function(corner){
+        latlngs.push([corner.lat, corner.lng]);
+      });
+      L.polygon(latlngs, {color: "red"}).addTo(mymap);
+    })
+  });
+
 
   //  add leaflet printer plugin
   L.browserPrint({

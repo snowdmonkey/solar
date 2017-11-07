@@ -1,12 +1,13 @@
-from geomapping.geo_mapper import GeoMapper, TifGeoMapper, AnchorGeoMapper
+import logging
+import os
+import sys
 from os.path import join
+
 from pymongo import MongoClient
+
+from geo_mapper import GeoMapper, TifGeoMapper, AnchorGeoMapper
 from image_processing_functions import batch_process_exif, batch_process_rotation, batch_process_label, \
     batch_process_locate
-from defect_category import DefectCategory
-import logging
-import sys
-import os
 
 
 class ImageProcessPipeline:

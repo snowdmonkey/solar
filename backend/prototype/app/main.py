@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, abort
+from flask import Flask, request, send_file, abort, jsonify
 from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
@@ -35,8 +35,6 @@ def get_image_root() -> str:
 
 
 def get_defects_summary(date: str) -> Union[None, dict]:
-    # with open(join(get_image_root(), date, "ir/defects.json")) as f:
-    #     defects_summary = json.load(f)
 
     value = get_mongo_client().solar.defect.find_one({"date": date}, {"value": 1})
     if value is None:
@@ -47,8 +45,7 @@ def get_defects_summary(date: str) -> Union[None, dict]:
 
 
 def get_exif(date: str) -> Union[dict, None]:
-    # with open(join(get_image_root(), date, "ir/exif.json")) as f:
-    #     exif = json.load(f)
+
     value = get_mongo_client().solar.exif.find_one({"date": date}, {"value": 1})
     if value is None:
         exif = None
@@ -172,6 +169,74 @@ def get_visual_image():
     img = cv2.imread(join(get_visual_folder(date), image_name), cv2.IMREAD_COLOR)
     img_bytes = cv2.imencode(".png", img)[1]
     return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
+
+
+@app.route("/panel_group", methods=["GET"])
+def get_panel_groups():
+    """
+    get all the panel groups positions
+    :return:
+    """
+    db = get_mongo_client()
+    cursor = db.solar.panelGroup.find(filter={}, projection={"_id": False})
+    result = list()
+    for post in cursor:
+        result.append(post)
+    return jsonify(result)
+
+
+@app.route("/panel_group", methods=["POST"])
+def add_panel_group():
+    """
+    add a new panel group
+    :return:
+    """
+    db = get_mongo_client()
+    post = request.get_json()
+    post["id"] = str(post["id"])
+    if db.solar.panelGroup.find_one({"id": post.get("id")}) is not None:
+        abort(400, "naming conflict")
+    db.solar.panelGroup.update_one({"id": post.get("id")}, {"$set": {"corners": post.get("corners")}}, upsert=True)
+    return "OK"
+
+
+@app.route("/panel_group/<string:group_id>", methods=["GET"])
+def get_panel_group(group_id: str):
+    """
+    get the details of a panel group
+    :param group_id:
+    :return:
+    """
+    db = get_mongo_client()
+    result = db.solar.panelGroup.find_one(filter={"id": group_id}, projection={"_id": False})
+    return jsonify(result)
+
+
+@app.route("/panel_group/<string:group_id>", methods=["PUT"])
+def set_panel_group(group_id: str):
+    """
+    set the name and/or the corners of a panel group
+    :param group_id:
+    :return:
+    """
+    db = get_mongo_client()
+    post = request.get_json()
+
+    if db.solar.panelGroup.find_one({"id": group_id}) is None:
+        abort(404, "id not found")
+
+    if post.get("id") is not None:
+        if post.get("id") != group_id:
+            current = db.solar.panelGroup.find_one({"id": post.get("id")})
+            if current is not None:
+                abort(400, "naming conflict")
+            else:
+                db.solar.panelGroup.update_one({"id": group_id}, {"$set": {"id": post.get("id")}})
+        if post.get("corners") is not None:
+            db.solar.panelGroup.update_one({"id": post.get("id")}, {"$set": {"corners": post.get("corners")}})
+    elif post.get("corners") is not None:
+        db.solar.panelGroup.update_one({"id": group_id}, {"$set": {"corners", post.get("corners")}})
+    return "OK"
 
 
 if __name__ == "__main__":

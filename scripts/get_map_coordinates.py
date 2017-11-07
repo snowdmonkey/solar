@@ -1,5 +1,5 @@
-from geo_mapper import TifGeoMapper
 import sys
+from geo_mapper import TifGeoMapper
 
 
 def get_tif_coordinates(tif_path: str):
