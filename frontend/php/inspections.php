@@ -309,7 +309,7 @@ $GPS_BOTTOM = getenv('GPS_BOTTOM');
 
     $("#datetimepicker1").on("dp.hide", function (e) {
         var selectedDate = e.date.format("YYYY-MM-DD");
-        window.location.href = "http://"+"<?php echo getAPIHost(); ?>"+"spi/php/inspections.php?date="+btoa(selectedDate);
+        window.location.href = "http://"+"<?php echo getAPIHost(); ?>"+"/spi/php/inspections.php?date="+btoa(selectedDate);
     });
     drawDefects();
     generateDefectTable();
