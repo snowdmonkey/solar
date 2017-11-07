@@ -17,11 +17,11 @@ def get_conf():
 if __name__ == '__main__':
     conf = get_conf()
 
-    path = 'html/index.html'
+    path = 'spi/html/index.html'
     if isfile(path):
         remove(path)
 
-    with open('html/index.html.template', 'r', encoding='utf-8') as tfile:
+    with open('spi/html/index.html.template', 'r', encoding='utf-8') as tfile:
         with open(path, 'w', encoding='utf-8') as ofile:
             for line in tfile:
                 if line.count('{$') > 0:
