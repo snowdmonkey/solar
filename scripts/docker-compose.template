@@ -31,8 +31,9 @@ services:
             - GPS_TOP={$GPS_TOP}
             - GPS_BOTTOM={$GPS_BOTTOM}
             - HOST={$HOST}
+            - PORT={$PORT}
         ports:
-            - "8090:80"
+            - "{$PORT}:80"
         links:
             - db:mongo
             - backend:solarapi
