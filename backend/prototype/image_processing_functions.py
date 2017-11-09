@@ -6,7 +6,7 @@ import base64
 import subprocess
 from os import listdir
 from os.path import join, basename
-from typing import Union
+from typing import Union, List, Dict
 
 import cv2
 import numpy as np
@@ -39,7 +39,7 @@ def _get_raw_from_string(s: str, depth: int=16) -> np.ndarray:
     return img
 
 
-def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
+def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     """
     use exiftool to extract exif information, include the camera's gps, relative altitude, gesture
     :param folder_path: the path of folder that contains the IR images
@@ -49,8 +49,6 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
 
     if outfile_path is None:
         outfile_path = join(folder_path, "exif.json")
-    # file_names = [x for x in listdir(folder_path) if x.endswith(".jpg")]
-    # exif = dict()
 
     cmd = ['exiftool', "-j", "-b", "-c", "%+.10f", join(folder_path, "*.jpg")]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
@@ -61,25 +59,6 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> dict:
         result["GPSLatitude"] = float(result.get("GPSLatitude"))
         result["GPSLongitude"] = float(result.get("GPSLongitude"))
 
-    # for file_name in file_names:
-    #
-    #     logger.info("Processing exif informaion of file %s", file_name)
-    #
-    #     base_name = os.path.splitext(basename(file_name))[0]
-    #     file_path = join(folder_path, file_name)
-    #     command = ['exiftool', "-j", "-c", "%+.10f", file_path]
-    #
-    #     proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-    #     out = proc.stdout
-    #     r_json = json.loads(out.decode("utf-8"))[0]
-    #     exif[base_name] = dict()
-    #     exif[base_name]["DateTimeOriginal"] = r_json.get("DateTimeOriginal")
-    #     exif[base_name]["GPSLatitude"] = float(r_json.get("GPSLatitude"))
-    #     exif[base_name]["GPSLongitude"] = float(r_json.get("GPSLongitude"))
-    #     exif[base_name]["RelativeAltitude"] = r_json.get("RelativeAltitude")
-    #     exif[base_name]["GimbalRollDegree"] = r_json.get("GimbalRollDegree")
-    #     exif[base_name]["GimbalYawDegree"] = r_json.get("GimbalYawDegree")
-    #     exif[base_name]["GimbalPitchDegree"] = r_json.get("GimbalPitchDegree")
     with open(outfile_path, "w") as outfile:
         json.dump(results, outfile)
 
@@ -136,29 +115,7 @@ def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None)
             rotated_img_path = join(rotate_folder_path, file_name)
             rotated_raw_path = join(rotate_raw_folder_path, file_name)
             cv2.imwrite(rotated_img_path, rotated_img)
-            cv2.imwrite(rotated_raw_path.replace("jpg", "tif"), rotated_raw)
-
-    # for file_name in file_names:
-    #     base_name = os.path.splitext(basename(file_name))[0]
-    #     image_path = join(folder_path, file_name)
-    #     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    #     degree = exif.get(base_name).get("GimbalYawDegree")
-    #     if degree is not None:
-    #         if abs(degree) < 10:
-    #             rotated_img = img
-    #         elif abs(degree - 90.0) < 10:
-    #             rotated_img = rotate_and_scale(img, -90.0)
-    #         elif abs(degree + 90.0) < 10:
-    #             rotated_img = rotate_and_scale(img, 90.0)
-    #         elif abs(degree - 180.0) < 10:
-    #             rotated_img = rotate_and_scale(img, 180.0)
-    #         elif abs(degree + 180.0) < 10:
-    #             rotated_img = rotate_and_scale(img, 180.0)
-    #         else:
-    #             logging.warning("%s is ignored since its yaw is %f degrees", file_name, degree)
-    #             continue
-    #         rotated_img_path = join(rotate_folder_path, file_name)
-    #         cv2.imwrite(rotated_img_path, rotated_img)
+            cv2.imwrite(rotated_raw_path.replace(".jpg", ".tif"), rotated_raw)
 
 
 def batch_process_label(folder_path: str) -> dict:
@@ -308,11 +265,11 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     return clustered_defects
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
-    # batch_process_exif(folder_path)
-    batch_process_rotation(folder_path)
+# if __name__ == '__main__':
+#     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#
+#     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
+#     # batch_process_exif(folder_path)
+#     batch_process_rotation(folder_path)
 
 

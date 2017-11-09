@@ -43,13 +43,13 @@ def get_defects_summary(station: str, date: str) -> Union[None, dict]:
     return defects_summary
 
 
-def get_exif(station: str, date: str) -> Union[dict, None]:
+def get_exif(station: str, date: str, image: str) -> Union[dict, None]:
 
-    value = get_mongo_client().solar.exif.find_one({"station": station, "date": date}, {"value": 1})
-    if value is None:
-        exif = None
-    else:
-        exif = value.get("value")
+    exif = get_mongo_client().solar.exif.find_one({"station": station, "date": date, "image": image}, {"_id": 0})
+    # if value is None:
+    #     exif = None
+    # else:
+    #     exif = value.get("value")
     return exif
 
 
@@ -104,7 +104,7 @@ def get_defect_by_date_and_station(station: str, date: str):
 @app.route("/station/<str:station>/date/<str:date>/defect", methods=["PUT"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
-    pipeline = ImageProcessPipeline(image_folder=folder_path, date=date)
+    pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
     pipeline.run()
     return "OK"
 
@@ -144,13 +144,16 @@ def get_images_by_defect(station: str, date: str, defect_id: str):
     defect_info = get_defects_summary(station, date).get(defect_id)
     image_names = defect_info.get("images")
     results = list()
-    exif = get_exif(station, date)
-    if exif is None:
-        abort(404)
+    # exif = get_exif(station, date)
+    # if exif is None:
+    #     abort(404)
     for image_name in image_names:
-        latitude = exif.get(image_name).get("GPSLatitude")
-        longitude = exif.get(image_name).get("GPSLongitude")
-        results.append({"imageName": image_name, "latitude": latitude, "longitude": longitude})
+        # latitude = exif.get(image_name).get("GPSLatitude")
+        # longitude = exif.get(image_name).get("GPSLongitude")
+        exif = get_exif(station=station, date=date, image=image_name)
+        lat = exif.get("GPSLatitude")
+        lng = exif.get("GPSLongitude")
+        results.append({"imageName": image_name, "latitude": lat, "longitude": lng})
     return jsonify(results)
 
 

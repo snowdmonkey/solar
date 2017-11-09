@@ -15,16 +15,18 @@ class ImageProcessPipeline:
     this class provides the whole pipeline of process a folder of images. The folder should typically be IMG_ROOT/{date}
     """
 
-    def __init__(self, image_folder: str, date: str):
+    def __init__(self, image_folder: str, station: str, date: str):
         """
         initial the process pipeline
         :param image_folder: the folder where the images rest, there should be sub-folder ir and visual, image_folder
+        :param station
         :param date: str of format YYYY-mm-dd e.g. 2017-06-21
         """
         self._image_folder = image_folder
         self._geo_mapper = self._get_geo_mapper()
         self._mongo_client = self._get_mongo_client()
         self._date = date
+        self._station = station
         self.logger = logging.getLogger("ImageProcessPipeline")
 
     @staticmethod
@@ -56,11 +58,20 @@ class ImageProcessPipeline:
 
         self.logger.info("starts to process exif")
 
-        exif_dict = batch_process_exif(folder_path=join(self._image_folder, "ir"))
-        results = dict()
-        results["date"] = self._date
-        results["value"] = exif_dict
-        self._mongo_client.solar.exif.update_one({"date": self._date}, {"$set": results}, upsert=True)
+        # exif_dict = batch_process_exif(folder_path=join(self._image_folder, "ir"))
+        # results = dict()
+        # results["date"] = self._date
+        # results["value"] = exif_dict
+        exif_list = batch_process_exif(folder_path=join(self._image_folder, "ir"))
+        for exif in exif_list:
+            exif.pop("ThumbnailImage", None)
+            exif.pop("RawThermalImage", None)
+            base_name = exif.get("FileName").replace(".jpg", "")
+            exif.update(({"date": self._date, "station": self._station, "image": base_name}))
+            self._mongo_client.solar.exif.update_one({"station": self._station, "date": self._date, "image": base_name},
+                                                     {"$set": exif}, upsert=True)
+        # self._mongo_client.solar.exif.update_one({"date": self._date}, {"$set": results}, upsert=True)
+
         self.logger.info("processing exif ends")
 
     def _process_rotate(self):
