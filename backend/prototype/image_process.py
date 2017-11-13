@@ -81,11 +81,17 @@ class ImageProcessPipeline:
 
     def _process_label(self):
         self.logger.info("starts to process labeling")
-        rect_dict = batch_process_label(folder_path=join(self._image_folder, "ir"))
-        results = dict()
-        results["date"] = self._date
-        results["value"] = rect_dict
-        self._mongo_client.solar.rect.update_one({"date": self._date}, {"$set": results}, upsert=True)
+        # rect_dict = batch_process_label(folder_path=join(self._image_folder, "ir"))
+        # results = dict()
+        # results["date"] = self._date
+        # results["value"] = rect_dict
+        # self._mongo_client.solar.rect.update_one({"date": self._date}, {"$set": results}, upsert=True)
+        results = batch_process_label(folder_path=join(self._image_folder, "ir"))
+        for d in results:
+            d.update({"date": self._date, "station": self._station})
+        collection = self._mongo_client.get_database("solar").get_collection("rect")
+        collection.delete_many({"station": self._station, "date": self._date})
+        collection.insert_many(results)
         self.logger.info("defects labeling ends")
 
     def _process_locate(self):

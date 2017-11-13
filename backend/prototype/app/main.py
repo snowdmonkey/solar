@@ -4,6 +4,8 @@ from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient
 from typing import Union
+from temperature import TempTransformer
+import numpy as np
 import cv2
 import io
 import logging
@@ -69,7 +71,29 @@ def get_visual_folder(station: str, date: str) -> str:
     return folder_path
 
 
-@app.route("/station/<str:station>/date", methos=["GET"])
+@app.route("/station", methods=["GET"])
+def get_station_list():
+    """
+    :return: a list of stations
+    """
+    posts = get_mongo_client().solar.station.find({}, {"_id": False})
+    results = [x for x in posts]
+    return jsonify(results)
+
+
+@app.route("/station/<string:station>", methods=["GET"])
+def get_station_by_id(station):
+    """
+    return the profile of a station
+    """
+    result = get_mongo_client().solar.station.find_one({"station": station}, {"_id": False})
+    if result is None:
+        abort(404)
+    else:
+        return jsonify(result)
+
+
+@app.route("/station/<string:station>/date", methods=["GET"])
 def get_reports_date_by_station(station: str):
     """
     return the dates of available reports for a station
@@ -79,7 +103,7 @@ def get_reports_date_by_station(station: str):
     return jsonify(result)
 
 
-@app.route("/station/<str:station>/date/<str:date>/defect", methods=["GET"])
+@app.route("/station/<string:station>/date/<string:date>/defect", methods=["GET"])
 def get_defect_by_date_and_station(station: str, date: str):
     """
     return a defect list by station and date
@@ -101,7 +125,7 @@ def get_defect_by_date_and_station(station: str, date: str):
         return jsonify(defects)
 
 
-@app.route("/station/<str:station>/date/<str:date>/defect", methods=["PUT"])
+@app.route("/station/<string:station>/date/<string:date>/defect", methods=["PUT"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
     pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
@@ -109,7 +133,7 @@ def analyze_by_date_and_station(station: str, date: str):
     return "OK"
 
 
-@app.route("/station/<str:station>/date/<str:date>/defect/<str:defect_id>", methods=["PUT"])
+@app.route("/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
 def set_defect_by_id(station: str, date: str, defect_id: str):
     """
     set a defect's gps coordinates and category
@@ -135,7 +159,7 @@ def set_defect_by_id(station: str, date: str, defect_id: str):
     return "OK"
 
 
-@app.route("/station/<str:station>/date/<str:date>/defect/<str:defect_id>/image", methods=["GET"])
+@app.route("/station/<string:station>/date/<string:date>/defect/<string:defect_id>/image", methods=["GET"])
 def get_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string which contains the names of the images relating to a defect
@@ -157,7 +181,7 @@ def get_images_by_defect(station: str, date: str, defect_id: str):
     return jsonify(results)
 
 
-@app.route("/station/<str:station>/date/<str:date>/image/ir/<str:image>", methods=["GET"])
+@app.route("/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
 def get_labeled_image(station: str, date: str, image: str):
     """
     generate and return an image with image name and defect id, the corresponding defects should be labeled on the image
@@ -205,7 +229,7 @@ def get_labeled_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="labeled.png", mimetype="image/png")
 
 
-@app.route("/station/<str:station>/date/<str:date>/image/visual/<str:image>", methods=["GET"])
+@app.route("/station/<string:station>/date/<string:date>/image/visual/<string:image>", methods=["GET"])
 def get_visual_image(station: str, date: str, image: str):
     """
     :return: raw visual image specified by image name
@@ -217,22 +241,22 @@ def get_visual_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
 
 
-@app.route("/panel_group", methods=["GET"])
-def get_panel_groups():
+@app.route("/station/<string:station>/panel_group", methods=["GET"])
+def get_panel_groups(station):
     """
     get all the panel groups positions
     :return:
     """
     db = get_mongo_client()
-    cursor = db.solar.panelGroup.find(filter={}, projection={"_id": False})
+    cursor = db.solar.panelGroup.find(filter={"station": station}, projection={"_id": False})
     result = list()
     for post in cursor:
         result.append(post)
     return jsonify(result)
 
 
-@app.route("/panel_group", methods=["POST"])
-def add_panel_group():
+@app.route("/station/<string:station>/panel_group", methods=["POST"])
+def add_panel_group(station: str):
     """
     add a new panel group
     :return:
@@ -240,49 +264,120 @@ def add_panel_group():
     db = get_mongo_client()
     post = request.get_json()
     post["id"] = str(post["id"])
-    if db.solar.panelGroup.find_one({"id": post.get("id")}) is not None:
+    if db.solar.panelGroup.find_one({"station": station, "id": post.get("id")}) is not None:
         abort(400, "naming conflict")
-    db.solar.panelGroup.update_one({"id": post.get("id")}, {"$set": {"corners": post.get("corners")}}, upsert=True)
+    db.solar.panelGroup.update_one({"id": post.get("id"), "station": station},
+                                   {"$set": {"corners": post.get("corners")}}, upsert=True)
     return "OK"
 
 
-@app.route("/panel_group/<string:group_id>", methods=["GET"])
-def get_panel_group(group_id: str):
+@app.route("/station/<string:station>/panel_group/<string:group_id>", methods=["GET"])
+def get_panel_group(station: str, group_id: str):
     """
     get the details of a panel group
-    :param group_id:
-    :return:
     """
     db = get_mongo_client()
-    result = db.solar.panelGroup.find_one(filter={"id": group_id}, projection={"_id": False})
+    result = db.solar.panelGroup.find_one(filter={"id": group_id, "station": station}, projection={"_id": False})
     return jsonify(result)
 
 
-@app.route("/panel_group/<string:group_id>", methods=["PUT"])
-def set_panel_group(group_id: str):
+@app.route("/station/<string:station>/panel_group/<string:group_id>", methods=["PUT"])
+def set_panel_group(station: str, group_id: str):
     """
     set the name and/or the corners of a panel group
-    :param group_id:
-    :return:
     """
     db = get_mongo_client()
     post = request.get_json()
 
-    if db.solar.panelGroup.find_one({"id": group_id}) is None:
-        abort(404, "id not found")
+    if db.solar.panelGroup.find_one({"id": group_id, "station": station}) is None:
+        abort(404)
 
     if post.get("id") is not None:
         if post.get("id") != group_id:
-            current = db.solar.panelGroup.find_one({"id": post.get("id")})
+            current = db.solar.panelGroup.find_one({"id": post.get("id"), "station": station})
             if current is not None:
                 abort(400, "naming conflict")
             else:
-                db.solar.panelGroup.update_one({"id": group_id}, {"$set": {"id": post.get("id")}})
+                db.solar.panelGroup.update_one({"id": group_id, "station": station}, {"$set": {"id": post.get("id")}})
         if post.get("corners") is not None:
-            db.solar.panelGroup.update_one({"id": post.get("id")}, {"$set": {"corners": post.get("corners")}})
+            db.solar.panelGroup.update_one({"id": post.get("id"), "station": station},
+                                           {"$set": {"corners": post.get("corners")}})
     elif post.get("corners") is not None:
-        db.solar.panelGroup.update_one({"id": group_id}, {"$set": {"corners", post.get("corners")}})
+        db.solar.panelGroup.update_one({"id": group_id, "station": station},
+                                       {"$set": {"corners", post.get("corners")}})
     return "OK"
+
+
+@app.route("/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
+def get_point_temperature(station: str, date: str, image: str):
+    """
+    :return: temperature in celsius degree at a provided point
+    """
+    exif = get_exif(station=station, date=date, image=image)
+    transformer = TempTransformer(e=exif.get("Emissivity"),
+                                  od=exif.get("RelativeAltitude"),
+                                  rtemp=22.0,
+                                  atemp=22.0,
+                                  irwtemp=22.0,
+                                  irt=exif.get("IRWindowTransmission"),
+                                  rh=50,
+                                  pr1=exif.get("PlanckR1"),
+                                  pb=exif.get("PlanckB"),
+                                  pf=exif.get("PlanckF"),
+                                  po=exif.get("PlanckO"),
+                                  pr2=exif.get("PlanckR2"))
+    row = int(request.args.get("row"))
+    col = int(request.args.get("col"))
+    raw = cv2.imread(join(get_image_root(), station, date, "ir", "rotated-raw", "{}.tif".format(image)),
+                     cv2.IMREAD_ANYDEPTH)
+    result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
+
+    return jsonify(result)
+
+
+@app.route("/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
+def get_range_temperature(station: str, date: str, image: str):
+    """
+    :return: the temperature profile in an rectangle area of the image
+    """
+    exif = get_exif(station=station, date=date, image=image)
+    transformer = TempTransformer(e=exif.get("Emissivity"),
+                                  od=exif.get("RelativeAltitude"),
+                                  rtemp=22.0,
+                                  atemp=22.0,
+                                  irwtemp=22.0,
+                                  irt=exif.get("IRWindowTransmission"),
+                                  rh=50,
+                                  pr1=exif.get("PlanckR1"),
+                                  pb=exif.get("PlanckB"),
+                                  pf=exif.get("PlanckF"),
+                                  po=exif.get("PlanckO"),
+                                  pr2=exif.get("PlanckR2"))
+    top = int(request.args.get("top"))
+    btm = int(request.args.get("btm"))
+    left = int(request.args.get("left"))
+    right = int(request.args.get("right"))
+    raw = cv2.imread(join(get_image_root(), station, date, "ir", "rotated-raw", "{}.tif".format(image)),
+                     cv2.IMREAD_ANYDEPTH)
+    raw_crop = raw[top: btm, left: right]
+    raw_crop[raw_crop == 0] = int(raw_crop.mean())
+    min_temp = transformer.raw2temp(raw_crop.min())
+    max_temp = transformer.raw2temp(raw_crop.max())
+    mean_temp = transformer.raw2temp(raw_crop.mean())
+    min_position = raw_crop.argmin(axis=-1).data
+    max_position = raw_crop.argmax(axis=-1).data
+    # min_position = np.array([1, 2]).data
+    # max_position = np.array([2, 3]).data
+
+    result = {"max": round(max_temp, 1),
+              "min": round(min_temp, 1),
+              "mean": round(mean_temp, 1),
+              "maxPos": {"row": max_position[0]+top,
+                         "col": max_position[1]+left},
+              "minPos": {"row": min_position[0]+top,
+                         "col": min_position[1]+left}}
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":

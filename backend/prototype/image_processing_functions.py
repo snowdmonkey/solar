@@ -118,15 +118,15 @@ def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None)
             cv2.imwrite(rotated_raw_path.replace(".jpg", ".tif"), rotated_raw)
 
 
-def batch_process_label(folder_path: str) -> dict:
+def batch_process_label(folder_path: str) -> List[dict]:
     """
     process the images under the rotated sub-directory of folder_path, label the defects with red rectangle
     :param folder_path: folder for the raw images
-    :return: dict with key as the image name, value as the list of rectangles on the image
+    :return: list of image semantic analysis results
     """
     rotate_folder_path = join(folder_path, "rotated")
     label_folder_path = join(folder_path, "labeled")
-    rect_dict = dict()
+    results = list()
     if not os.path.exists(label_folder_path):
         os.mkdir(label_folder_path)
     file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
@@ -165,22 +165,30 @@ def batch_process_label(folder_path: str) -> dict:
                 if h < 200*w:
                     rectangles.append((x, y, w, h))
             if len(rectangles) > 0:
-                rect_dict[base_name] = dict()
-                rect_dict[base_name]["rects"] = list()
-                rect_dict[base_name]["height"] = raw_image.shape[0]
-                rect_dict[base_name]["width"] = raw_image.shape[1]
+                result = dict()
+                result.update({"image": base_name,
+                               "rects": list(),
+                               "height": raw_image.shape[0],
+                               "width": raw_image.shape[1]})
+                # rect_dict[base_name] = dict()
+                # rect_dict[base_name]["rects"] = list()
+                # rect_dict[base_name]["height"] = raw_image.shape[0]
+                # rect_dict[base_name]["width"] = raw_image.shape[1]
                 for rectangle in rectangles:
                     x, y, w, h = rectangle
                     cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
-                    rect_dict[base_name]["rects"].append({"x": x, "y": y, "w": w, "h": h})
-
+                    result.get("rects").append({"x": x, "y": y, "w": w, "h": h})
+                    # rect_dict[base_name]["rects"].append({"x": x, "y": y, "w": w, "h": h})
+                results.append(result)
                 labeled_img_path = join(label_folder_path, file_name)
                 cv2.imwrite(labeled_img_path, raw_image)
     outfile_path = join(folder_path, "rect.json")
     with open(outfile_path, "w") as file:
-        json.dump(rect_dict, file)
+        # json.dump(rect_dict, file)
+        json.dump(results, file)
 
-    return rect_dict
+    # return rect_dict
+    return results
 
 
 def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float, group_criteria: float) -> dict:
@@ -265,11 +273,11 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
     return clustered_defects
 
 
-# if __name__ == '__main__':
-#     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-#
-#     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
-#     # batch_process_exif(folder_path)
-#     batch_process_rotation(folder_path)
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
+    # batch_process_exif(folder_path)
+    batch_process_label(folder_path)
 
 
