@@ -3,7 +3,7 @@ from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient
-from typing import Union
+from typing import Union, List
 from temperature import TempTransformer
 import numpy as np
 import cv2
@@ -35,13 +35,13 @@ def get_image_root() -> str:
     return image_root_path
 
 
-def get_defects_summary(station: str, date: str) -> Union[None, dict]:
+def get_defects_summary(station: str, date: str) -> Union[None, List[dict]]:
 
-    value = get_mongo_client().solar.defect.find_one({"date": date, "station": station}, {"value": 1})
+    value = get_mongo_client().solar.defect.find({"date": date, "station": station}, {"_id": False})
     if value is None:
         defects_summary = None
     else:
-        defects_summary = value.get("value")
+        defects_summary = value
     return defects_summary
 
 
@@ -81,12 +81,39 @@ def get_station_list():
     return jsonify(results)
 
 
+@app.route("/station", methods=["POST"])
+def add_station():
+    """
+    add a station
+    """
+    collection = get_mongo_client().get_database("solar").get_collection("station")
+    post_body = request.get_json()
+    station_id = post_body.get("stationId")
+    station_name = post_body.get("stationName")
+    station_description = post_body.get("description")
+    station_gps = post_body.get("gps")
+    if station_id is None:
+        abort(400, "need to provide station ID")
+    elif station_name is None:
+        abort(400, "need station name")
+    elif station_gps is None:
+        abort(400, "need gps")
+    else:
+        collection.insert_one({
+            "stationId": station_id,
+            "stationName": station_name,
+            "description": station_description,
+            "gps": station_gps
+        })
+        return "OK"
+
+
 @app.route("/station/<string:station>", methods=["GET"])
 def get_station_by_id(station):
     """
     return the profile of a station
     """
-    result = get_mongo_client().solar.station.find_one({"station": station}, {"_id": False})
+    result = get_mongo_client().solar.station.find_one({"stationId": station}, {"_id": False})
     if result is None:
         abort(404)
     else:
@@ -94,13 +121,13 @@ def get_station_by_id(station):
 
 
 @app.route("/station/<string:station>/date", methods=["GET"])
-def get_reports_date_by_station(station: str):
+def get_reports_by_date_station(station: str):
     """
     return the dates of available reports for a station
     """
-    posts = get_mongo_client().solar.defect.find({"station": station}, {"date": True})
-    result = [x.get("date") for x in posts]
-    return jsonify(result)
+    collection = get_mongo_client().get_database("solar").get_collection("defect")
+    posts = collection.find({"station": station}, {"date": True}).distinct(key="date")
+    return jsonify(posts)
 
 
 @app.route("/station/<string:station>/date/<string:date>/defect", methods=["GET"])
@@ -113,13 +140,13 @@ def get_defect_by_date_and_station(station: str, date: str):
         abort(404)
     else:
         defects = list()
-        for defect_id, defect_info in defect_summary.items():
+        for d in defect_summary:
             defect = {
-                "defectId": defect_id,
-                "latitude": defect_info.get("latitude"),
-                "longitude": defect_info.get("longitude"),
-                "category": defect_info.get("category"),
-                "groupId": defect_info.get("group")
+                "defectId": d.get("defectId"),
+                "latitude": d.get("lat"),
+                "longitude": d.get("lng"),
+                "category": d.get("category"),
+                "groupId": d.get("group")
             }
             defects.append(defect)
         return jsonify(defects)
@@ -144,18 +171,18 @@ def set_defect_by_id(station: str, date: str, defect_id: str):
     cat = post_body.get("category")
     defect_collection = get_mongo_client().solar.defect
 
-    if defect_collection.find_one({"station": station, "date": date}).get("value").get(defect_id) is None:
+    if defect_collection.find_one({"station": station, "date": date, "defectId": defect_id}) is None:
         abort(404)
 
     if lat is not None:
-        defect_collection.update_one({"station": station, "date": date},
-                                     {"$set": {"value.{}.latitude".format(defect_id): lat}})
+        defect_collection.update_one({"station": station, "date": date, "defectId": defect_id},
+                                     {"$set": {"lat": lat}})
     if lng is not None:
-        defect_collection.update_one({"station": station, "date": date},
-                                     {"$set": {"value.{}.longitude".format(defect_id): lng}})
+        defect_collection.update_one({"station": station, "date": date, "defectId": defect_id},
+                                     {"$set": {"lng": lng}})
     if cat is not None:
-        defect_collection.update_one({"station": station, "date": date},
-                                     {"$set": {"value.{}.category".format(defect_id): cat}})
+        defect_collection.update_one({"station": station, "date": date, "defectId": defect_id},
+                                     {"$set": {"category".format(defect_id): cat}})
     return "OK"
 
 
@@ -165,8 +192,11 @@ def get_images_by_defect(station: str, date: str, defect_id: str):
     return a json string which contains the names of the images relating to a defect
     :return: json string
     """
-    defect_info = get_defects_summary(station, date).get(defect_id)
-    image_names = defect_info.get("images")
+    defect_info = get_mongo_client().get_database("solar")\
+        .get_collection("defect")\
+        .find_one({"station": station, "date": date, "defectId": defect_id})
+    image_names = [x.get("image") for x in defect_info.get("rects")]
+
     results = list()
     # exif = get_exif(station, date)
     # if exif is None:
@@ -220,10 +250,13 @@ def get_labeled_image(station: str, date: str, image: str):
             img = cv2.applyColorMap(img, color_id)
 
     if defect_id is not None:
-        rects = get_defects_summary(station=station, date=date).get(defect_id).get("images").get(base_image_name)
+        # rects = get_defects_summary(station=station, date=date).get(defect_id).get("images").get(base_image_name)
+        rects = get_mongo_client().get_database("solar").get_collection("defect")\
+            .find_one({"station": station, "date": date, "defectId": defect_id}, {"_id": 0, "rects": 1}).get("rects")
         for rect in rects:
-            x, y, w, h = rect.get("x"), rect.get("y"), rect.get("w"), rect.get("h")
-            cv2.rectangle(img, (x, y), (x + w, y + h), rect_color, 1)
+            if rect.get("image") == image:
+                x, y, w, h = rect.get("x"), rect.get("y"), rect.get("w"), rect.get("h")
+                cv2.rectangle(img, (x, y), (x + w, y + h), rect_color, 1)
 
     img_bytes = cv2.imencode(".png", img)[1]
     return send_file(io.BytesIO(img_bytes), attachment_filename="labeled.png", mimetype="image/png")

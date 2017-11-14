@@ -23,28 +23,29 @@ class ImageProcessPipeline:
         :param date: str of format YYYY-mm-dd e.g. 2017-06-21
         """
         self._image_folder = image_folder
-        self._geo_mapper = self._get_geo_mapper()
+        # self._geo_mapper = self._get_geo_mapper()
         self._mongo_client = self._get_mongo_client()
         self._date = date
         self._station = station
+        self._gsd_ir = float(os.getenv("GSD_IR"))
         self.logger = logging.getLogger("ImageProcessPipeline")
 
-    @staticmethod
-    def _get_geo_mapper() -> GeoMapper:
-        panorama_path = os.getenv("BG_PATH")
-
-        if os.path.isfile(panorama_path):
-            geo_mapper = TifGeoMapper(panorama_path)
-            return geo_mapper
-        else:  # testing purpose only
-            pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
-                             [1358, 639], [1358, 1328], [1358, 2016],
-                             [2076, 639], [2076, 1328], [2076, 2016]]
-            gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
-                           [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
-                           [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
-            geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-            return geo_mapper
+    # @staticmethod
+    # def _get_geo_mapper() -> GeoMapper:
+    #     panorama_path = os.getenv("BG_PATH")
+    #
+    #     if os.path.isfile(panorama_path):
+    #         geo_mapper = TifGeoMapper(panorama_path)
+    #         return geo_mapper
+    #     else:  # testing purpose only
+    #         pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
+    #                          [1358, 639], [1358, 1328], [1358, 2016],
+    #                          [2076, 639], [2076, 1328], [2076, 2016]]
+    #         gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
+    #                        [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
+    #                        [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
+    #         geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
+    #         return geo_mapper
 
     @staticmethod
     def _get_mongo_client() -> MongoClient:
@@ -58,19 +59,14 @@ class ImageProcessPipeline:
 
         self.logger.info("starts to process exif")
 
-        # exif_dict = batch_process_exif(folder_path=join(self._image_folder, "ir"))
-        # results = dict()
-        # results["date"] = self._date
-        # results["value"] = exif_dict
         exif_list = batch_process_exif(folder_path=join(self._image_folder, "ir"))
+        collection = self._get_mongo_client().get_database("solar").get_collection("exif")
         for exif in exif_list:
             exif.pop("ThumbnailImage", None)
             exif.pop("RawThermalImage", None)
-            base_name = exif.get("FileName").replace(".jpg", "")
-            exif.update(({"date": self._date, "station": self._station, "image": base_name}))
-            self._mongo_client.solar.exif.update_one({"station": self._station, "date": self._date, "image": base_name},
-                                                     {"$set": exif}, upsert=True)
-        # self._mongo_client.solar.exif.update_one({"date": self._date}, {"$set": results}, upsert=True)
+            exif.update({"station": self._station, "date": self._date})
+        collection.delete_many({"station": self._station, "date": self._date})
+        collection.insert_many(exif_list)
 
         self.logger.info("processing exif ends")
 
@@ -96,28 +92,35 @@ class ImageProcessPipeline:
 
     def _process_locate(self):
         self.logger.info("starts to process defects locating")
-        pixel_ratio = self._get_pixel_ratio()
-        group_criteria = 200 / float(os.getenv("GSD_PANORAMA"))
-        defect_dict = batch_process_locate(folder_path=join(self._image_folder, "ir"),
-                                           geo_mapper=self._geo_mapper,
-                                           pixel_ratio=pixel_ratio,
-                                           group_criteria=group_criteria)
-        results = dict()
-        results["date"] = self._date
-        results["value"] = defect_dict
-        self._mongo_client.solar.defect.update_one({"date": self._date}, {"$set": results}, upsert=True)
+        # pixel_ratio = self._get_pixel_ratio()
+        # group_criteria = 200 / float(os.getenv("GSD_PANORAMA"))
+        defects = batch_process_locate(folder_path=join(self._image_folder, "ir"),
+                                       gsd=self._gsd_ir,
+                                       group_criteria=2.0)
+
+        for d in defects:
+            d.update({"station": self._station, "date": self._date, "gsd": self._gsd_ir})
+
+        # results = dict()
+        # results["date"] = self._date
+        # results["value"] = defect_dict
+        # self._mongo_client.solar.defect.update_one({"date": self._date}, {"$set": results}, upsert=True)
+        collection = self._get_mongo_client().get_database("solar").get_collection("defect")
+        collection.delete_many({"station": self._station, "date": self._date})
+        collection.insert_many(defects)
+
         self.logger.info("defects locating ends")
 
-    @staticmethod
-    def _get_pixel_ratio() -> float:
-        """
-        pixel ratio means one pixel on the panorama image equals to how many pixels on the ir image physically.
-        Usually it equals to GSD_PANORAMA / GSD_IR
-        :return: pixel_ratio as a float
-        """
-        gsd_panorama = float(os.getenv("GSD_PANORAMA"))
-        gsd_ir = float(os.getenv("GSD_IR"))
-        return gsd_panorama / gsd_ir
+    # @staticmethod
+    # def _get_pixel_ratio() -> float:
+    #     """
+    #     pixel ratio means one pixel on the panorama image equals to how many pixels on the ir image physically.
+    #     Usually it equals to GSD_PANORAMA / GSD_IR
+    #     :return: pixel_ratio as a float
+    #     """
+    #     gsd_panorama = float(os.getenv("GSD_PANORAMA"))
+    #     gsd_ir = float(os.getenv("GSD_IR"))
+    #     return gsd_panorama / gsd_ir
 
     def run(self):
         self._process_exif()
@@ -130,8 +133,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     folder_path = sys.argv[1]
-    date = sys.argv[2]
-    pipeline = ImageProcessPipeline(folder_path, date)
+    station = sys.argv[2]
+    date = sys.argv[3]
+    pipeline = ImageProcessPipeline(folder_path, station=station, date=date)
     pipeline.run()
 
 

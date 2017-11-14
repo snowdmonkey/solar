@@ -4,6 +4,7 @@ import logging
 import os
 import base64
 import subprocess
+import utm
 from os import listdir
 from os.path import join, basename
 from typing import Union, List, Dict
@@ -15,7 +16,7 @@ from scipy.cluster.hierarchy import linkage, cut_tree
 from defect_category import DefectCategory
 from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
-from geo_mapper import GeoMapper
+from geo_mapper import UTMGeoMapper
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,8 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     for result in results:
         result["GPSLatitude"] = float(result.get("GPSLatitude"))
         result["GPSLongitude"] = float(result.get("GPSLongitude"))
+        base_name = result.get("FileName").replace(".jpg", "")
+        result["image"] = base_name
 
     with open(outfile_path, "w") as outfile:
         json.dump(results, outfile)
@@ -170,39 +173,31 @@ def batch_process_label(folder_path: str) -> List[dict]:
                                "rects": list(),
                                "height": raw_image.shape[0],
                                "width": raw_image.shape[1]})
-                # rect_dict[base_name] = dict()
-                # rect_dict[base_name]["rects"] = list()
-                # rect_dict[base_name]["height"] = raw_image.shape[0]
-                # rect_dict[base_name]["width"] = raw_image.shape[1]
+
                 for rectangle in rectangles:
                     x, y, w, h = rectangle
                     cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
                     result.get("rects").append({"x": x, "y": y, "w": w, "h": h})
-                    # rect_dict[base_name]["rects"].append({"x": x, "y": y, "w": w, "h": h})
+
                 results.append(result)
                 labeled_img_path = join(label_folder_path, file_name)
                 cv2.imwrite(labeled_img_path, raw_image)
     outfile_path = join(folder_path, "rect.json")
     with open(outfile_path, "w") as file:
-        # json.dump(rect_dict, file)
         json.dump(results, file)
 
-    # return rect_dict
     return results
 
 
-def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: float, group_criteria: float) -> dict:
+def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) -> List[dict]:
     """
     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
-    defects to a json file folder_path/defects.json. This function is also try to unify those defects that very close
+    defects to a json file folder_path/defects.json. This function also tries to unify those defects that very close
     to each other since they might be the same defect.
     :param folder_path: this is the folder where the raw images rest
-    :param geo_mapper: the geo_mapper that can map a pixel on the big map to a pair of gps coordinates and vice versa
-    :param pixel_ratio: the number of pixels on the small map that is equivalent to one pixel on the big map in term
-    of the same amount of the physical distance
-    :param group_criteria: the distance criteria of grouping the defects, the distance is represented by the numebr of
-    pixels on large map
-    :return: dict of {defect_id: {lat, lon, x, y, category, image: [rects]}}
+    :param gsd: ground sampling distance in meters
+    :param group_criteria: the distance criteria of grouping the defects, in meters
+    :return: list of defects profile
     """
 
     with open(join(folder_path, "exif.json"), "r") as f:
@@ -212,31 +207,54 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
         rect_info = json.load(f)
 
     defects = list()
-    for image_name, value in rect_info.items():
-        base_name = os.path.splitext(basename(image_name))[0]
-        image_latitude = exif.get(base_name).get("GPSLatitude")
-        image_longitude = exif.get(base_name).get("GPSLongitude")
 
-        for rect in value["rects"]:
-            x_small_image = rect.get("x")
-            y_small_image = rect.get("y")
+    for d in rect_info:
+        base_name = d.get("image")
+        # image_latitude = exif.get(base_name).get("GPSLatitude")
+        # image_longitude = exif.get(base_name).get("GPSLongitude")
+        cursor = next((x for x in exif if x.get("image") == base_name))
+        image_latitude = cursor.get("GPSLatitude")
+        image_longitude = cursor.get("GPSLongitude")
+        image_height = d.get("height")
+        image_width = d.get("width")
 
-            x_shift_small_image = x_small_image - (value["width"] - 1) / 2
-            y_shift_small_image = y_small_image - (value["height"] - 1) / 2
+        geo_mapper = UTMGeoMapper(gsd=gsd, origin_gps=(image_latitude, image_longitude),
+                                  origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
 
-            x_shift_large_image = x_shift_small_image / pixel_ratio
-            y_shift_large_image = y_shift_small_image / pixel_ratio
+        for rect in d.get("rects"):
+            x = rect.get("x")
+            y = rect.get("y")
+            utm_easting, utm_northing, utm_zone = geo_mapper.pixel2utm(row=y, col=x)
 
-            y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
+            defects.append({"image": base_name, "utm_easting": utm_easting, "utm_northing": utm_northing,
+                            "utm_zone": utm_zone, "rect": rect})
 
-            x_large_image = x_center_large_image + x_shift_large_image
-            y_large_image = y_center_large_image + y_shift_large_image
 
-            defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
-                            "rect": rect})
+    # for image_name, value in rect_info.items():
+    #     base_name = os.path.splitext(basename(image_name))[0]
+    #     image_latitude = exif.get(base_name).get("GPSLatitude")
+    #     image_longitude = exif.get(base_name).get("GPSLongitude")
+    #
+    #     for rect in value["rects"]:
+    #         x_small_image = rect.get("x")
+    #         y_small_image = rect.get("y")
+    #
+    #         x_shift_small_image = x_small_image - (value["width"] - 1) / 2
+    #         y_shift_small_image = y_small_image - (value["height"] - 1) / 2
+    #
+    #         x_shift_large_image = x_shift_small_image / pixel_ratio
+    #         y_shift_large_image = y_shift_small_image / pixel_ratio
+    #
+    #         y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
+    #
+    #         x_large_image = x_center_large_image + x_shift_large_image
+    #         y_large_image = y_center_large_image + y_shift_large_image
+    #
+    #         defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
+    #                         "rect": rect})
 
 #     grouping the defects according to pixel distance on the stitched image
-    pixel_location_table = np.array([[x.get("x_large_image"), x.get("y_large_image")] for x in defects])
+    pixel_location_table = np.array([[x.get("utm_easting"), x.get("utm_northing")] for x in defects])
     linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
 
     ctree = cut_tree(linkage_matrix, height=[group_criteria])
@@ -247,25 +265,34 @@ def batch_process_locate(folder_path: str, geo_mapper: GeoMapper, pixel_ratio: f
         y_center = np.mean(pixel_location_table[cluster == i, 1])
         cluster_centroids.append([x_center, y_center])
 
-    clustered_defects = dict()
-
     for i in range(len(defects)):
         defect = defects[i]
         defect_id_num = cluster[i]
-        defect_id = "defect" + str(defect_id_num)
-        if clustered_defects.get(defect_id) is None:
-            clustered_defects[defect_id] = dict()
-            clustered_defects[defect_id]["category"] = DefectCategory.UNCONFIRMED
-            clustered_defects[defect_id]["x"] = round(cluster_centroids[defect_id_num][0])
-            clustered_defects[defect_id]["y"] = round(cluster_centroids[defect_id_num][1])
-            clustered_defects[defect_id]["latitude"], clustered_defects[defect_id]["longitude"] = \
-                geo_mapper.pixel2gps(cluster_centroids[defect_id_num][1], cluster_centroids[defect_id_num][0])
-            clustered_defects[defect_id]["images"] = dict()
-            clustered_defects[defect_id]["images"][defect.get("image")] = [defect.get("rect")]
-        elif clustered_defects[defect_id]["images"].get(defect.get("image")) is None:
-            clustered_defects[defect_id]["images"][defect.get("image")] = [defect.get("rect")]
-        else:
-            clustered_defects[defect_id]["images"][defect.get("image")].append(defect.get("rect"))
+        defect.update({"defect_id_num": defect_id_num})
+
+    clustered_defects = list()
+    for i in set(cluster):
+        d = dict()
+        d.update({
+            "defectId": "DEF{:05d}".format(i),
+            "utmEasting": cluster_centroids[i][0],
+            "utmNorthing": cluster_centroids[i][1],
+            "category": DefectCategory.UNCONFIRMED,
+            "rects": list()
+        })
+
+        involved_defects = [x for x in defects if x.get("defect_id_num") == i]
+        d.update({"utmZone": involved_defects[0].get("utm_zone")})
+
+        for involved_defect in involved_defects:
+            temp_d = dict()
+            temp_d.update(involved_defect.get("rect"))
+            temp_d.update({"image": involved_defect.get("image")})
+            d.get("rects").append(temp_d)
+        lat, lng = utm.to_latlon(d.get("utmEasting"), d.get("utmNorthing"), d.get("utmZone"), northern=True)
+        d.update({"lat": lat, "lng": lng})
+
+        clustered_defects.append(d)
 
     with open(join(folder_path, "defects.json"), "w") as f:
         json.dump(clustered_defects, f)
@@ -278,6 +305,6 @@ if __name__ == '__main__':
 
     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
     # batch_process_exif(folder_path)
-    batch_process_label(folder_path)
+    batch_process_locate(folder_path, gsd=0.0283, group_criteria=2.0)
 
 

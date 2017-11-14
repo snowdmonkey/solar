@@ -6,6 +6,7 @@ import subprocess
 import json
 import re
 import gdal
+import utm
 
 
 class GeoMapper(ABC):
@@ -144,29 +145,39 @@ class TifGeoMapper(GeoMapper):
 
 class UTMGeoMapper(GeoMapper):
 
-    def __init__(self, gsd: float, origin: Tuple[float, float], utm_zone: int, origin_pixel: Tuple[int, int] = (0, 0)):
+    def __init__(self, gsd: float,
+                 origin_utm: Tuple[float, float] = None,
+                 utm_zone: int = None,
+                 origin_gps: Tuple[float, float] = None,
+                 origin_pixel: Tuple[float, float] = (0.0, 0.0)):
         """
         this geomapper is based on a UTM transformation
         :param gsd: ground sample distance, in meters
-        :param origin: the utm coordinates of the origin pixel, in meters
-        :param utm_zone: UTM zone of our projector
+        :param origin_utm: the utm coordinates of the origin pixel, in meters
+        :param origin_gps: the gps coordinates of the origin pixel, if it is provided, then origin_utm and utm_zone can
+        be none
         :param origin_pixel: pixel corresponding to origin, default to be the top left corner, (row, col) format
         """
         self._gsd = gsd
-        self._origin = origin
+        self._origin = origin_utm
+        self._utm_zone = utm_zone
         self._origin_pixel = origin_pixel
+        if origin_gps is not None:
+            easting, northing, utm_zone, _ = utm.from_latlon(*origin_gps)
+            self._origin = (easting, northing)
+            self._utm_zone = utm_zone
         self._projector = Proj(proj="utm", zone=utm_zone, ellps="WGS84")
 
-    def pixel2utm(self, row: int, col: int) -> Tuple[float, float]:
+    def pixel2utm(self, row: int, col: int) -> Tuple[float, float, int]:
         """
         take in a pixel position and return utm coordinates
         :param row: pixel row position
         :param col: pixel col position
-        :return: corresponding utm coordinate in (x, y) format
+        :return: corresponding utm coordinate in (easting, northing, zone) format
         """
         x = self._origin[0] + (col - self._origin_pixel[1]) * self._gsd
         y = self._origin[1] - (row - self._origin_pixel[0]) * self._gsd
-        return x, y
+        return x, y, self._utm_zone
 
     def utm2pixel(self, x: float, y: float) -> Tuple[int, int]:
         """
@@ -188,7 +199,7 @@ class UTMGeoMapper(GeoMapper):
         :param col: col index
         :return: gps coordinates
         """
-        x, y = self.pixel2utm(row, col)
+        x, y, _ = self.pixel2utm(row, col)
         lng, lat = self._projector(x, y, inverse=True)
         return lat, lng
 
