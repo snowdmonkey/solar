@@ -400,12 +400,11 @@ definitions:
     example: "2017-09-19"
 
   GPS:
-    type: array
+    type: array[2]
     items:
       type: number
-    minItems: 2
-    maxItems: 2
     example: [36.6551991831705, 117.2324184458665]
+    description: latitude, longitude
 
   StationId:
     type: string
