@@ -1,0 +1,451 @@
+swagger: '2.0'
+info:
+  description: API document for solar panel inspectation backend
+  version: 1.0.0
+  title: Solar panel inspection
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+host: '127.0.0.1:5000'
+basePath: /
+tags:
+  - name: station
+    description: all about station
+  - name: date
+    description: all about the dates of available reports
+  - name: defects
+    description: all about defects
+  - name: images
+    description: all about images
+  - name: temperature
+    description: all about Celsius temperature of an IR image
+schemes:
+  - http
+paths:
+  /station:
+    get:
+      tags:
+        - station
+      summary: "get available stations"
+      description: ""
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Station'
+    post:
+      tags:
+        - station
+      summary: "add a station"
+      produces:
+        - text/plain
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Station'
+      responses:
+        "200":
+          description: success
+
+  /station/{stationId}:
+    get:
+      tags:
+        - station
+      summary: get a station
+      description: "get the information of a station by id"
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+          description: e.g., linuo
+      responses:
+        "200":
+          description: "success"
+        "404":
+          description: "station not found"
+
+  /station/{stationId}/date:
+    get:
+      tags:
+        - date
+      summary: "get the dates of available reports of a station"
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          type: string
+          description: e.g., linuo
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Date"
+
+  /station/{stationId}/date/{date}/defect:
+    get:
+      tags:
+        - defects
+      summary: "get a list of defects by station and date"
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+          description: e.g., linuo
+        - in: path
+          name: date
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Defect"
+    put:
+      tags:
+        - defects
+      summary: "trigger the analysis process of a batch of images by station and date"
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+          description: e.g., linuo
+        - name: date
+          type: string
+          in: path
+          required: true
+      produces:
+        - text/plain
+      responses:
+        "200":
+          description: "success"
+
+  /station/{stationId}/date/{date}/defect/{defectId}:
+    put:
+      tags:
+        - defects
+      summary: "set a defect's category and gps"
+      parameters:
+        - name: stationId
+          description: e.g., linuo
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: defectId
+          type: string
+          in: path
+          required: true
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              lat:
+                type: number
+                example: 36.6551991831705
+              lng:
+                type: number
+                example: 117.2324184458665
+              cat:
+                $ref: "#/definitions/DefectCategory"
+      produces:
+        - text/plain
+      responses:
+        "200":
+          description: "success"
+
+  /station/{stationId}/date/{date}/defect/{defectId}/image:
+    get:
+      tags:
+        - images
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: defectId
+          type: string
+          in: path
+          required: true
+      description: "get the names of the images that captures a defect"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                imageName:
+                  $ref: "#/definitions/ImageName"
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+
+  /station/{stationId}/date/{date}/image/ir/{image}:
+    get:
+      tags:
+        - images
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: image
+          type: string
+          in: path
+          required: true
+          description: "base name of a image"
+        - name: colorMap
+          type: string
+          enum: ["autumn", "bone","jet","winter","rainbow","ocean","summer","spring","cool","hsv","pink","hot"]
+          in: query
+          required: false
+          description: "if not provided, render a gray scale image"
+        - name: defect
+          type: string
+          in: query
+          required: false
+          description: "if it is given, label the defect on the map"
+      description: "get the infrared image by image name, also can label a given defect"
+      produces:
+        - image/png
+      responses:
+        "200":
+          description: "success"
+
+  /station/{stationId}/date/{date}/image/visual/{image}:
+    get:
+      tags:
+        - images
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: image
+          type: string
+          in: path
+          required: true
+          description: "base name of a image"
+      description: "get visible ligth image by station, date and image name"
+      summary: "get visible light image"
+      produces:
+        - image/png
+      responses:
+        "200":
+          description: "success"
+
+  /station/{stationId}/date/{date}/image/{image}/temperature/point:
+    get:
+      tags:
+        - temperature
+      summary: "get temperature at a pixel"
+      description: "get celsius temperature at a given pixel on an IR image"
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: image
+          type: string
+          in: path
+          required: true
+          description: "base name of a image"
+        - name: row
+          type: integer
+          in: query
+          required: true
+          description: "row number of the given pixel, counting from 0"
+        - name: col
+          type: integer
+          in: query
+          required: true
+          description: "column number of the given pixel, counting from 0"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: object
+            properties:
+              temperature:
+                type: number
+                example:
+                  56.1
+
+  /station/{stationId}/date/{date}/image/{image}/temperature/range:
+    get:
+      tags:
+        - temperature
+      summary: "get temperature in a range"
+      description: "get statistics of Celsius temperature in a rectangle area on an IR image"
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: image
+          type: string
+          in: path
+          required: true
+          description: "base name of a image"
+        - name: top
+          type: integer
+          in: query
+          required: true
+          description: "top row number of the given range, counting from 0"
+        - name: btm
+          type: integer
+          in: query
+          required: true
+          description: "bottom row number of the given range, counting from 0"
+        - name: left
+          type: integer
+          in: query
+          required: true
+          description: "left column number of the given range, counting from 0"
+        - name: right
+          type: integer
+          in: query
+          required: true
+          description: "right column number of the given range, counting from 0"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: object
+            properties:
+              max:
+                type: number
+              min:
+                type: number
+              mean:
+                type: number
+              maxPos:
+                type: object
+                description: pixel pisition of the maximun temperature
+                properties:
+                  col:
+                    type: integer
+                  row:
+                    type: integer
+              minPos:
+                type: object
+                description: pixel pisition of the minimum temperature
+                properties:
+                  col:
+                    type: integer
+                  row:
+                    type: integer
+
+definitions:
+  Date:
+    type: string
+    example: "2017-09-19"
+
+  GPS:
+    type: array
+    items:
+      type: number
+    minItems: 2
+    maxItems: 2
+    example: [36.6551991831705, 117.2324184458665]
+
+  StationId:
+    type: string
+    example: linuo
+
+  Station:
+    type: object
+    properties:
+      stationId:
+        $ref: "#/definitions/StationId"
+      stationName:
+        type: string
+        example: "linuo"
+      description:
+        type: string
+        example: "test station"
+      gps:
+        $ref: "#/definitions/GPS"
+    required:
+      - stationId
+      - stationName
+      - gps
+
+  Defect:
+    type: object
+    properties:
+      defectId:
+        type: string
+        example: DEF00002
+      latitude:
+        type: number
+      longitude:
+        type: number
+      category:
+        $ref: "#/definitions/DefectCategory"
+      groupId:
+        type: string
+
+  DefectCategory:
+    type: integer
+    enum: [1, 0, -1]
+    description: 1 means a confirmed defect, 0 means not yet confirmed, -1 means confirm not a defect, i.e., false alarm
+
+  ImageName:
+    type: string
+    example: DJI_0004

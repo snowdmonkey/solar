@@ -373,6 +373,11 @@ def get_range_temperature(station: str, date: str, image: str):
     """
     :return: the temperature profile in an rectangle area of the image
     """
+    top = int(request.args.get("top"))
+    btm = int(request.args.get("btm"))
+    left = int(request.args.get("left"))
+    right = int(request.args.get("right"))
+
     exif = get_exif(station=station, date=date, image=image)
     transformer = TempTransformer(e=exif.get("Emissivity"),
                                   od=exif.get("RelativeAltitude"),
@@ -386,10 +391,7 @@ def get_range_temperature(station: str, date: str, image: str):
                                   pf=exif.get("PlanckF"),
                                   po=exif.get("PlanckO"),
                                   pr2=exif.get("PlanckR2"))
-    top = int(request.args.get("top"))
-    btm = int(request.args.get("btm"))
-    left = int(request.args.get("left"))
-    right = int(request.args.get("right"))
+
     raw = cv2.imread(join(get_image_root(), station, date, "ir", "rotated-raw", "{}.tif".format(image)),
                      cv2.IMREAD_ANYDEPTH)
     raw_crop = raw[top: btm, left: right]
@@ -399,8 +401,6 @@ def get_range_temperature(station: str, date: str, image: str):
     mean_temp = transformer.raw2temp(raw_crop.mean())
     min_position = raw_crop.argmin(axis=-1).data
     max_position = raw_crop.argmax(axis=-1).data
-    # min_position = np.array([1, 2]).data
-    # max_position = np.array([2, 3]).data
 
     result = {"max": round(max_temp, 1),
               "min": round(min_temp, 1),
