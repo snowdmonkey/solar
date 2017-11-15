@@ -71,7 +71,7 @@ def get_visual_folder(station: str, date: str) -> str:
     return folder_path
 
 
-@app.route("/station", methods=["GET"])
+@app.route("/api/vi/station", methods=["GET"])
 def get_station_list():
     """
     :return: a list of stations
@@ -81,7 +81,7 @@ def get_station_list():
     return jsonify(results)
 
 
-@app.route("/station", methods=["POST"])
+@app.route("/api/vi/station", methods=["POST"])
 def add_station():
     """
     add a station
@@ -108,7 +108,7 @@ def add_station():
         return "OK"
 
 
-@app.route("/station/<string:station>", methods=["GET"])
+@app.route("/api/vi/station/<string:station>", methods=["GET"])
 def get_station_by_id(station):
     """
     return the profile of a station
@@ -120,7 +120,7 @@ def get_station_by_id(station):
         return jsonify(result)
 
 
-@app.route("/station/<string:station>/date", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date", methods=["GET"])
 def get_reports_by_date_station(station: str):
     """
     return the dates of available reports for a station
@@ -130,7 +130,7 @@ def get_reports_by_date_station(station: str):
     return jsonify(posts)
 
 
-@app.route("/station/<string:station>/date/<string:date>/defect", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/defect", methods=["GET"])
 def get_defect_by_date_and_station(station: str, date: str):
     """
     return a defect list by station and date
@@ -152,7 +152,7 @@ def get_defect_by_date_and_station(station: str, date: str):
         return jsonify(defects)
 
 
-@app.route("/station/<string:station>/date/<string:date>/defect", methods=["PUT"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/defect", methods=["PUT"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
     pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
@@ -160,7 +160,7 @@ def analyze_by_date_and_station(station: str, date: str):
     return "OK"
 
 
-@app.route("/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
 def set_defect_by_id(station: str, date: str, defect_id: str):
     """
     set a defect's gps coordinates and category
@@ -186,7 +186,7 @@ def set_defect_by_id(station: str, date: str, defect_id: str):
     return "OK"
 
 
-@app.route("/station/<string:station>/date/<string:date>/defect/<string:defect_id>/image", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/defect/<string:defect_id>/image", methods=["GET"])
 def get_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string which contains the names of the images relating to a defect
@@ -211,7 +211,7 @@ def get_images_by_defect(station: str, date: str, defect_id: str):
     return jsonify(results)
 
 
-@app.route("/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
 def get_labeled_image(station: str, date: str, image: str):
     """
     generate and return an image with image name and defect id, the corresponding defects should be labeled on the image
@@ -262,7 +262,7 @@ def get_labeled_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="labeled.png", mimetype="image/png")
 
 
-@app.route("/station/<string:station>/date/<string:date>/image/visual/<string:image>", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/image/visual/<string:image>", methods=["GET"])
 def get_visual_image(station: str, date: str, image: str):
     """
     :return: raw visual image specified by image name
@@ -274,7 +274,7 @@ def get_visual_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
 
 
-@app.route("/station/<string:station>/panel_group", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/panel_group", methods=["GET"])
 def get_panel_groups(station):
     """
     get all the panel groups positions
@@ -288,7 +288,7 @@ def get_panel_groups(station):
     return jsonify(result)
 
 
-@app.route("/station/<string:station>/panel_group", methods=["POST"])
+@app.route("/api/vi/station/<string:station>/panel_group", methods=["POST"])
 def add_panel_group(station: str):
     """
     add a new panel group
@@ -304,7 +304,7 @@ def add_panel_group(station: str):
     return "OK"
 
 
-@app.route("/station/<string:station>/panel_group/<string:group_id>", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/panel_group/<string:group_id>", methods=["GET"])
 def get_panel_group(station: str, group_id: str):
     """
     get the details of a panel group
@@ -314,7 +314,7 @@ def get_panel_group(station: str, group_id: str):
     return jsonify(result)
 
 
-@app.route("/station/<string:station>/panel_group/<string:group_id>", methods=["PUT"])
+@app.route("/api/vi/station/<string:station>/panel_group/<string:group_id>", methods=["PUT"])
 def set_panel_group(station: str, group_id: str):
     """
     set the name and/or the corners of a panel group
@@ -341,7 +341,7 @@ def set_panel_group(station: str, group_id: str):
     return "OK"
 
 
-@app.route("/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
     :return: temperature in celsius degree at a provided point
@@ -368,7 +368,7 @@ def get_point_temperature(station: str, date: str, image: str):
     return jsonify(result)
 
 
-@app.route("/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
+@app.route("/api/vi/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """
     :return: the temperature profile in an rectangle area of the image

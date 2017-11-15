@@ -25,7 +25,7 @@ tags:
 schemes:
   - http
 paths:
-  /station:
+  /api/v1/station:
     get:
       tags:
         - station
@@ -56,7 +56,7 @@ paths:
         "200":
           description: success
 
-  /station/{stationId}:
+  /api/v1/station/{stationId}:
     get:
       tags:
         - station
@@ -76,7 +76,7 @@ paths:
         "404":
           description: "station not found"
 
-  /station/{stationId}/date:
+  /api/v1/station/{stationId}/date:
     get:
       tags:
         - date
@@ -97,7 +97,7 @@ paths:
             items:
               $ref: "#/definitions/Date"
 
-  /station/{stationId}/date/{date}/defect:
+  /api/v1/station/{stationId}/date/{date}/defect:
     get:
       tags:
         - defects
@@ -124,7 +124,8 @@ paths:
     put:
       tags:
         - defects
-      summary: "trigger the analysis process of a batch of images by station and date"
+      summary: image analysis trigger
+      description: "trigger the analysis process of a batch of images by station and date"
       parameters:
         - name: stationId
           type: string
@@ -141,7 +142,7 @@ paths:
         "200":
           description: "success"
 
-  /station/{stationId}/date/{date}/defect/{defectId}:
+  /api/v1/station/{stationId}/date/{date}/defect/{defectId}:
     put:
       tags:
         - defects
@@ -180,10 +181,11 @@ paths:
         "200":
           description: "success"
 
-  /station/{stationId}/date/{date}/defect/{defectId}/image:
+  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/image:
     get:
       tags:
         - images
+      summary: get a list of image names
       parameters:
         - name: stationId
           type: string
@@ -215,10 +217,11 @@ paths:
                 longitude:
                   type: number
 
-  /station/{stationId}/date/{date}/image/ir/{image}:
+  /api/v1/station/{stationId}/date/{date}/image/ir/{image}:
     get:
       tags:
         - images
+      summary: get an infrared image
       parameters:
         - name: stationId
           type: string
@@ -251,7 +254,7 @@ paths:
         "200":
           description: "success"
 
-  /station/{stationId}/date/{date}/image/visual/{image}:
+  /api/v1/station/{stationId}/date/{date}/image/visual/{image}:
     get:
       tags:
         - images
@@ -270,14 +273,14 @@ paths:
           required: true
           description: "base name of a image"
       description: "get visible ligth image by station, date and image name"
-      summary: "get visible light image"
+      summary: "get a visible light image"
       produces:
         - image/png
       responses:
         "200":
           description: "success"
 
-  /station/{stationId}/date/{date}/image/{image}/temperature/point:
+  /api/v1/station/{stationId}/date/{date}/image/{image}/temperature/point:
     get:
       tags:
         - temperature
@@ -320,7 +323,7 @@ paths:
                 example:
                   56.1
 
-  /station/{stationId}/date/{date}/image/{image}/temperature/range:
+  /api/v1/station/{stationId}/date/{date}/image/{image}/temperature/range:
     get:
       tags:
         - temperature
