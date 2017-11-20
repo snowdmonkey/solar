@@ -125,7 +125,7 @@ paths:
       tags:
         - defects
       summary: image analysis trigger
-      description: "trigger the analysis process of a batch of images by station and date"
+      description: "trigger the analysis create_profile of a batch of images by station and date"
       parameters:
         - name: stationId
           type: string

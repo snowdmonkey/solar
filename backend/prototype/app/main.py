@@ -2,7 +2,7 @@ from flask import Flask, request, send_file, abort, jsonify
 from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
-from pymongo import MongoClient
+from pymongo import MongoClient, collection
 from typing import Union, List
 from temperature import TempTransformer
 import numpy as np
@@ -69,6 +69,10 @@ def get_visual_folder(station: str, date: str) -> str:
     """
     folder_path = join(get_image_root(), station, date, "visual/rotated")
     return folder_path
+
+
+def get_panel_group_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("panelGroup")
 
 
 @app.route("/api/v1/station", methods=["GET"])

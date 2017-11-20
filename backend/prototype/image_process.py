@@ -12,12 +12,12 @@ from image_processing_functions import batch_process_exif, batch_process_rotatio
 
 class ImageProcessPipeline:
     """
-    this class provides the whole pipeline of process a folder of images. The folder should typically be IMG_ROOT/{date}
+    this class provides the whole pipeline of create_profile a folder of images. The folder should typically be IMG_ROOT/{date}
     """
 
     def __init__(self, image_folder: str, station: str, date: str):
         """
-        initial the process pipeline
+        initial the create_profile pipeline
         :param image_folder: the folder where the images rest, there should be sub-folder ir and visual, image_folder
         :param station
         :param date: str of format YYYY-mm-dd e.g. 2017-06-21
@@ -57,7 +57,7 @@ class ImageProcessPipeline:
 
     def _process_exif(self):
 
-        self.logger.info("starts to process exif")
+        self.logger.info("starts to create_profile exif")
 
         exif_list = batch_process_exif(folder_path=join(self._image_folder, "ir"))
         collection = self._get_mongo_client().get_database("solar").get_collection("exif")
@@ -71,12 +71,12 @@ class ImageProcessPipeline:
         self.logger.info("processing exif ends")
 
     def _process_rotate(self):
-        self.logger.info("starts to process rotate")
+        self.logger.info("starts to create_profile rotate")
         batch_process_rotation(folder_path=join(self._image_folder, "ir"))
         self.logger.info("processing rotation ends")
 
     def _process_label(self):
-        self.logger.info("starts to process labeling")
+        self.logger.info("starts to create_profile labeling")
         # rect_dict = batch_process_label(folder_path=join(self._image_folder, "ir"))
         # results = dict()
         # results["date"] = self._date
@@ -91,7 +91,7 @@ class ImageProcessPipeline:
         self.logger.info("defects labeling ends")
 
     def _process_locate(self):
-        self.logger.info("starts to process defects locating")
+        self.logger.info("starts to create_profile defects locating")
         # pixel_ratio = self._get_pixel_ratio()
         # group_criteria = 200 / float(os.getenv("GSD_PANORAMA"))
         defects = batch_process_locate(folder_path=join(self._image_folder, "ir"),

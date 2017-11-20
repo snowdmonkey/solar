@@ -4,7 +4,7 @@ from geo_mapper import TifGeoMapper
 
 def get_tif_coordinates(tif_path: str):
     """
-    pre-process the tif background map and return the center gps, top-left gps, and bottom-right gps
+    pre-create_profile the tif background map and return the center gps, top-left gps, and bottom-right gps
     :param tif_path: path to the background tif file
     :return: tuple ((center_lat, center_lon), (top_left_lat, top_left_lon), (bottom_right_lat, bottom_left_lon))
     """

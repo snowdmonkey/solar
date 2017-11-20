@@ -157,6 +157,10 @@ class PanelCropper:
         return masked_image
 
 
+
+
+
+
 def main():
     plate_cropper = PanelCropper("../pic/DJI_0001.jpg")
     sub_imgs = plate_cropper.get_sub_imgs(rotate_n_crop=True)

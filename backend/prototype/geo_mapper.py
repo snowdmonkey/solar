@@ -182,8 +182,8 @@ class UTMGeoMapper(GeoMapper):
     def utm2pixel(self, x: float, y: float) -> Tuple[int, int]:
         """
         take in a pair of utm coordinates and return pixel position
-        :param x: northern of the utm coordinates
-        :param y: eastern of the utm coordinates
+        :param x: easting of the utm coordinates
+        :param y: northing of the utm coordinates
         :return: pixel position in form of (row, col)
         """
         row = self._origin_pixel[0] - (y - self._origin[1]) / self._gsd
@@ -216,22 +216,7 @@ class UTMGeoMapper(GeoMapper):
 
 
 def main():
-    # pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
-    #                  [1358, 639], [1358, 1328], [1358, 2016],
-    #                  [2076, 639], [2076, 1328], [2076, 2016]]
-    # gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
-    #                [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
-    #                [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
-    #
-    # geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-    # print(geo_mapper.pixel2gps(0, 0))
-    # print(geo_mapper.pixel2gps(2715, 2655))
-
-    tif_path = r"C:\Users\h232559\Desktop\odm_orthophoto.tif"
-    geo_mapper = TifGeoMapper(tif_path)
-    # print(geo_mapper.gps2pixel(33.803890, 119.731152))
-    print(geo_mapper.pixel2gps(0, 0))
-    # print(geo_mapper.pixel2gps(11465, 8642))
+    pass
 
 
 if __name__ == "__main__":

@@ -123,7 +123,7 @@ def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None)
 
 def batch_process_label(folder_path: str) -> List[dict]:
     """
-    process the images under the rotated sub-directory of folder_path, label the defects with red rectangle
+    create_profile the images under the rotated sub-directory of folder_path, label the defects with red rectangle
     :param folder_path: folder for the raw images
     :return: list of image semantic analysis results
     """

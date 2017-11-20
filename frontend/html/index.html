@@ -232,12 +232,12 @@
   var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
   L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
 
-  $.get("http://127.0.0.1:5000/panel_group", function(data){
+  $.get("http://127.0.0.1:5000/api/v1/station/linuo/panel_group", function(data){
     data.forEach(function(panelGroup){
-      var corners = panelGroup.corners;
+      var vertices = panelGroup.vertices;
       var latlngs = [];
-      corners.forEach(function(corner){
-        latlngs.push([corner.lat, corner.lng]);
+      vertices.forEach(function(vertex){
+        latlngs.push(vertex);
       });
       L.polygon(latlngs, {color: "red"}).addTo(mymap);
     })

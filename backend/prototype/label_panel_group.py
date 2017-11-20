@@ -11,7 +11,7 @@ class PanelGroupLabeler(ABC):
     @abstractmethod
     def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
         """
-        process a given image
+        create_profile a given image
         :param img_path:
         :return: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col), (conner3_row, corner3_col),
          (conner4_row, corner4_col),...]
@@ -23,7 +23,7 @@ class ColorBasedLabeler(PanelGroupLabeler):
 
     def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
         """
-        process a given image
+        create_profile a given image
         :param img_path:
         :return: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col), (conner3_row, corner3_col),
          (conner4_row, corner4_col)]
