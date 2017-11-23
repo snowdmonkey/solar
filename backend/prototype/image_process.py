@@ -23,29 +23,11 @@ class ImageProcessPipeline:
         :param date: str of format YYYY-mm-dd e.g. 2017-06-21
         """
         self._image_folder = image_folder
-        # self._geo_mapper = self._get_geo_mapper()
         self._mongo_client = self._get_mongo_client()
         self._date = date
         self._station = station
         self._gsd_ir = float(os.getenv("GSD_IR"))
         self.logger = logging.getLogger("ImageProcessPipeline")
-
-    # @staticmethod
-    # def _get_geo_mapper() -> GeoMapper:
-    #     panorama_path = os.getenv("BG_PATH")
-    #
-    #     if os.path.isfile(panorama_path):
-    #         geo_mapper = TifGeoMapper(panorama_path)
-    #         return geo_mapper
-    #     else:  # testing purpose only
-    #         pixel_anchors = [[639, 639],  [639, 1328],  [639, 2016],
-    #                          [1358, 639], [1358, 1328], [1358, 2016],
-    #                          [2076, 639], [2076, 1328], [2076, 2016]]
-    #         gps_anchors = [[33.59034075, 119.63160525], [33.59034075, 119.6334535], [33.59034075, 119.63530175],
-    #                        [33.58873250, 119.63160525], [33.58873250, 119.6334535], [33.58873250, 119.63530175],
-    #                        [33.58712425, 119.63160525], [33.58712425, 119.6334535], [33.58712425, 119.63530175]]
-    #         geo_mapper = AnchorGeoMapper(pixel_anchors=pixel_anchors, gps_anchors=gps_anchors)
-    #         return geo_mapper
 
     @staticmethod
     def _get_mongo_client() -> MongoClient:

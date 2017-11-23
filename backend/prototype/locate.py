@@ -6,6 +6,8 @@ from typing import List, Tuple, Optional
 
 import utm
 from shapely.geometry import Point, Polygon
+from semantic import IRProfile
+from geo_mapper import GeoMapper
 
 
 class PanelGroup:
@@ -37,18 +39,22 @@ class PanelGroup:
                 raise ValueError("provide gps or utm only")
 
         # a polygon based on panel group's utm coordinates
-        self._polygon = Polygon([(x[0], [1]) for x in self._vertices_utm])
+        self._polygon = Polygon([(x[0], x[1]) for x in self._vertices_utm])
 
         self._utm_zone = self._vertices_utm[0][2]
         self._group_id = group_id
         self._bounds = self._polygon.bounds
 
     @property
+    def panel_group_id(self) -> Optional[str]:
+        return self._group_id
+
+    @property
     def utm_zone(self) -> int:
         return self._utm_zone
 
     @property
-    def most_west(self) -> float:
+    def least_east(self) -> float:
         """
         :return: least easting utm value, in meters
         """
@@ -69,7 +75,7 @@ class PanelGroup:
         return self._bounds[3]
 
     @property
-    def most_south(self) -> float:
+    def least_north(self) -> float:
         """
         :return: least northing utm value, in meters
         """
@@ -145,13 +151,57 @@ class Station:
         # shorten the candidates list
         groups = [group for group in self.panel_groups if all([
             (utm_pos[0] - distance_th) < group.most_east < (utm_pos[0] + distance_th),
-            (utm_pos[0] - distance_th) < group.most_west < utm_pos[0] + distance_th,
+            (utm_pos[0] - distance_th) < group.least_east < utm_pos[0] + distance_th,
             (utm_pos[1] - distance_th) < group.most_north < (utm_pos[1] + distance_th),
-            (utm_pos[1] - distance_th) < group.most_south < (utm_pos[1] + distance_th)])]
+            (utm_pos[1] - distance_th) < group.least_north < (utm_pos[1] + distance_th)])]
 
         if len(groups) == 0:
             return None
 
         groups.sort(key=lambda group: group.distance_to_utm(utm_pos))
         return groups[0]
+
+
+class Positioner:
+    """ this class aims to get the geographical positions for an IRProfile
+    """
+
+    def __init__(self):
+        pass
+
+    def locate(self, profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
+        """
+        the method will map an IRProfile to geographical locations with a geo mapper and calibrate it with a Station
+        :param profile: the IRProfile that will be positioned
+        :param geo_mapper: geo mapper that can map pixels to geographical locations
+        :param farm: Station information
+        :return: None
+        """
+        for panel_group in profile.panel_groups:
+
+            # map a panel group profile to a physical panel group
+            centroid_xy = panel_group.centroid_xy
+            centroid_gps = geo_mapper.pixel2gps(centroid_xy[1], centroid_xy[0])
+            closest_panel = farm.get_closest_group(gps=centroid_gps)
+            panel_group.set_panel_group_id(closest_panel.panel_group_id)
+
+            # adjust a defect's utm with its relative position on a panel group
+            for defect in panel_group.defects:
+                defect_rc = defect.points_rc[0]
+                to_top_ratio = (defect_rc[0] - panel_group.most_top) / (panel_group.most_bottom - panel_group.most_top)
+                assert 0.0 <= to_top_ratio <= 1.0
+
+                defect_utm = geo_mapper.pixel2utm(*defect_rc)
+                corrected_northing = \
+                    closest_panel.most_north - (closest_panel.most_north-closest_panel.least_north)*to_top_ratio
+                corrected_utm = defect_utm[0], corrected_northing, defect_utm[2]
+
+                # make sure the defect location is inside the closest panel
+                if closest_panel.distance_to_utm(corrected_utm) != 0:
+                    # TODO
+                    pass
+
+                defect.set_utm(corrected_utm)
+
+
 

@@ -17,6 +17,9 @@ from defect_category import DefectCategory
 from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
+from semantic import ThIRProfiler
+from locate import Station, Positioner, PanelGroup
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +126,7 @@ def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None)
 
 def batch_process_label(folder_path: str) -> List[dict]:
     """
-    create_profile the images under the rotated sub-directory of folder_path, label the defects with red rectangle
+    label the images under the rotated sub-directory of folder_path, label the defects with red rectangle
     :param folder_path: folder for the raw images
     :return: list of image semantic analysis results
     """
@@ -189,6 +192,154 @@ def batch_process_label(folder_path: str) -> List[dict]:
     return results
 
 
+def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
+    """
+    create profile for the images under the rotated sub-directory of folder path
+    :param folder_path: folder for the raw image
+    :param gsd: ground sampling distance, in meters
+    :return: list of image semantic analysis results
+    """
+    rotated_folder_path = join(folder_path, "rotated")
+    profile_folder_path = join(folder_path, "profile")
+
+    if not os.path.exists(profile_folder_path):
+        os.mkdir(profile_folder_path)
+
+    profiler = ThIRProfiler()
+    positioner = Positioner()
+    station = Station()
+
+    with open(join(folder_path, "exif.json"), "r") as f:
+        exif = json.load(f)
+
+    with open(join(folder_path, "..", "..", "groupPanel.json"), "r") as f:
+        group_locations = json.load(f)
+
+    for d in group_locations:
+        panel_group = PanelGroup(group_id=d.get("groupId"), vertices_gps=[tuple(x) for x in d.get("vertices")])
+        station.add_panel_group(panel_group)
+
+    results = list()
+    profile_results = list()
+
+    for d in exif:
+        base_name = d.get("image")
+
+        logger.info("start to analysis image {}".format(base_name))
+
+        image_path = join(rotated_folder_path, d.get("FileName"))
+
+        if not os.path.exists(image_path):
+            continue
+
+        profile = profiler.create_profile(image_path)
+
+        # construct the geo mapper
+        image_latitude = d.get("GPSLatitude")
+        image_longitude = d.get("GPSLongitude")
+        image_height = d.get("ImageWidth")
+        image_width = d.get("ImageHeight")
+
+        geo_mapper = UTMGeoMapper(gsd=gsd, origin_gps=(image_latitude, image_longitude),
+                                  origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
+
+        # positioning
+        positioner.locate(profile, geo_mapper, station)
+
+        # save the profile to image for checking
+        cv2.imwrite(join(profile_folder_path, "{}.jpg".format(base_name)), profile.draw())
+
+        # record the analysis results
+        rects = list()
+        for panel_group in profile.panel_groups:
+            for defect in panel_group.defects:
+                rect = {"x": defect.points_xy[0][0],
+                        "y": defect.points_xy[0][1],
+                        "w": defect.points_xy[1][0]-defect.points_xy[0][0],
+                        "h": defect.points_xy[1][1]-defect.points_xy[0][1],
+                        "easting": defect.utm[0],
+                        "northing": defect.utm[1],
+                        "utm_zone": defect.utm[2],
+                        "panel_group_id": panel_group.panel_group_id}
+                rects.append(rect)
+        if len(rects) > 0:
+            result = {"image": base_name, "height": image_height, "width": image_width, "rects": rects}
+            results.append(result)
+        profile_results.append(profile.to_dict())
+
+    outfile_path = join(folder_path, "rect.json")
+    with open(outfile_path, "w") as file:
+        json.dump(results, file)
+
+    with open(join(folder_path, "profile.json"), "w") as f:
+        json.dump(profile_results, f)
+
+    return results
+
+
+def batch_process_aggregate(folder_path: str, group_criteria: float) -> List[dict]:
+    """
+    this function will read all the labeled defects from ./rect.json, aggregate close ones and output the aggregated
+    defects information to ./defects.json
+    :param folder_path: folder_path of the raw ir images
+    :param group_criteria: in meters, if two defects are closer than this, they will be aggregated
+    :return: list of information about defects
+    """
+    with open(join(folder_path, "exif.json"), "r") as f:
+        exif = json.load(f)
+
+    with open(join(folder_path, "rect.json"), "r") as f:
+        rect_info = json.load(f)
+
+    rects = list()
+    for d in rect_info:
+        for rect in d.get("rects"):
+            rect.update({"height": d.get("height"),
+                         "width": d.get("width"),
+                         "image": d.get("image")})
+            rects.append(rect)
+
+    group_ids = set([x.get("panel_group_id") for x in rects])
+
+    defect_num = 0
+    defects = list()
+
+    for group_id in group_ids:
+        rects_match_id = [x for x in rects if x.get("panel_group_id") == group_id]
+
+        if len(rects_match_id) == 1:
+            cluster = [0]
+        else:
+            pixel_location_table = np.array([[x.get("easting"), x.get("northing")] for x in rects_match_id])
+            linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
+
+            ctree = cut_tree(linkage_matrix, height=[group_criteria])
+            cluster = np.array([x[0] for x in ctree])
+
+        for i in range(len(rects_match_id)):
+            rects_match_id[i].update({"defectId": "DEF{:05d}".format(cluster[i] + defect_num)})
+        defect_num += max(cluster)+1
+
+        defect_id_set = set([x.get("defectId") for x in rects_match_id])
+        for defect_id in defect_id_set:
+            defect = {"defectId": defect_id, "panelGroupId": group_id,"category": DefectCategory.UNCONFIRMED}
+            rect_match_defect = [x for x in rects_match_id if x.get("defectId") == defect_id]
+
+            easting = float(np.mean([x.get("easting") for x in rect_match_defect]))
+            northing = float(np.mean([x.get("northing") for x in rect_match_defect]))
+            utm_zone = rects_match_id[0].get("utm_zone")
+            lat, lng = utm.to_latlon(easting, northing, utm_zone, northern=True)
+            defect.update({"lat": lat, "lng": lng, "utmEasting": easting, "utmNorthing": northing, "utmZone": utm_zone})
+            defect.update({"rects": [x for x in rect_match_defect]})
+
+            defects.append(defect)
+
+    with open(join(folder_path, "defects.json"), "w") as f:
+        json.dump(defects, f)
+
+    return defects
+
+
 def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) -> List[dict]:
     """
     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
@@ -228,7 +379,6 @@ def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) ->
 
             defects.append({"image": base_name, "utm_easting": utm_easting, "utm_northing": utm_northing,
                             "utm_zone": utm_zone, "rect": rect})
-
 
     # for image_name, value in rect_info.items():
     #     base_name = os.path.splitext(basename(image_name))[0]
@@ -305,6 +455,4 @@ if __name__ == '__main__':
 
     folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
     # batch_process_exif(folder_path)
-    batch_process_locate(folder_path, gsd=0.0283, group_criteria=2.0)
-
-
+    batch_process_aggregate(folder_path, group_criteria=2.0)
