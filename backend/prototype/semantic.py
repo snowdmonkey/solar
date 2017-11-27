@@ -445,10 +445,14 @@ def aggregate_panels(panels: List[PanelProfile]) -> List[PanelGroupProfile]:
 
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    import sys
-    img_path = sys.argv[1]
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("img", type=str, help="path of an IR image")
+    args = parser.parse_args()
+
     segmentor = ThIRProfiler()
-    profile = segmentor.create_profile(img_path)
+    profile = segmentor.create_profile(args.img)
     img = profile.draw()
     cv2.imshow("img", img)
     cv2.waitKey(0)

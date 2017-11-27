@@ -6,8 +6,12 @@ from typing import List, Tuple, Optional
 
 import utm
 from shapely.geometry import Point, Polygon
+from shapely.ops import nearest_points
 from semantic import IRProfile
 from geo_mapper import GeoMapper
+
+UTM = Tuple[float, float, int]
+GPS = Tuple[float, float]
 
 
 class PanelGroup:
@@ -102,6 +106,17 @@ class PanelGroup:
         utm_pos = utm.from_latlon(*gps)[:3]
         return self.distance_to_utm(utm_pos)
 
+    def nearest_utm(self, utm_pos: UTM) -> UTM:
+        """take in a utm position and return the nearest position on the panel group to this point
+        :param utm_pos: a utm position in form of (easting, northing, zone_number)
+        :return: nearest position on the panel group, in form of (easting, northing, zone_number)
+        """
+        if utm_pos[2] != self.utm_zone:
+            raise ValueError("the point is not in the same utm zone")
+        point = Point(utm_pos[:2])
+        nearest_point = nearest_points(point, self._polygon)[1]
+        return nearest_point.x, nearest_point.y, self.utm_zone
+
 
 class Station:
     """
@@ -169,7 +184,8 @@ class Positioner:
     def __init__(self):
         pass
 
-    def locate(self, profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
+    @staticmethod
+    def locate(profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
         """
         the method will map an IRProfile to geographical locations with a geo mapper and calibrate it with a Station
         :param profile: the IRProfile that will be positioned
@@ -191,6 +207,12 @@ class Positioner:
                 to_top_ratio = (defect_rc[0] - panel_group.most_top) / (panel_group.most_bottom - panel_group.most_top)
                 assert 0.0 <= to_top_ratio <= 1.0
 
+                if to_top_ratio < 0.1:
+                    to_top_ratio = 0.1
+
+                if to_top_ratio > 0.9:
+                    to_top_ratio = 0.9
+
                 defect_utm = geo_mapper.pixel2utm(*defect_rc)
                 corrected_northing = \
                     closest_panel.most_north - (closest_panel.most_north-closest_panel.least_north)*to_top_ratio
@@ -198,10 +220,6 @@ class Positioner:
 
                 # make sure the defect location is inside the closest panel
                 if closest_panel.distance_to_utm(corrected_utm) != 0:
-                    # TODO
-                    pass
+                    corrected_utm = closest_panel.nearest_utm(corrected_utm)
 
                 defect.set_utm(corrected_utm)
-
-
-

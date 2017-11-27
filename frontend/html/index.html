@@ -211,13 +211,13 @@
 
 <script type="text/javascript">
 
+  const apiBaseUrl = "http://127.0.0.1:5000/api/v1/";
+
   var mymap = L.map("map", {
     fullscreenControl: true,
     fullscreenControlOptions: {position: "topleft"}
   }).setView([36.6551991831705, 117.2324184458665], 18);
   L.tileLayer.chinaProvider("TianDiTu.Satellite.Map", {maxZoom: 21, minZoom: 5}).addTo(mymap);
-//  L.imageOverlay("../img/panorama.png",
-//    [[36.65861713209903, 117.22974398716559], [36.65178133341483, 117.23509227307021]]).addTo(mymap);
 
   $.get("../img/tiles/position.json", function(data){
     data.forEach(function(datum){
@@ -232,16 +232,16 @@
   var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
   L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
 
-  $.get("http://127.0.0.1:5000/api/v1/station/linuo/panel_group", function(data){
-    data.forEach(function(panelGroup){
-      var vertices = panelGroup.vertices;
-      var latlngs = [];
-      vertices.forEach(function(vertex){
-        latlngs.push(vertex);
-      });
-      L.polygon(latlngs, {color: "red"}).addTo(mymap);
-    })
-  });
+//  $.get("http://127.0.0.1:5000/api/v1/station/linuo/panel_group", function(data){
+//    data.forEach(function(panelGroup){
+//      var vertices = panelGroup.vertices;
+//      var latlngs = [];
+//      vertices.forEach(function(vertex){
+//        latlngs.push(vertex);
+//      });
+//      L.polygon(latlngs, {color: "red"}).addTo(mymap);
+//    })
+//  });
 
 
   //  add leaflet printer plugin
@@ -329,8 +329,8 @@
   function generateDefectTable(selectedDate) {
     defectTable.clear();
     defectTable.draw();
-    $.get("http://127.0.0.1:5000/defects", {date: selectedDate}, function (data) {
-      var defects = JSON.parse(data);
+    var defectUrl = apiBaseUrl + "station/linuo/date/" + selectedDate + "/defect";
+    $.get(defectUrl, function (defects) {
 
       defects.forEach(function (defect) {
         var rowData = [];
@@ -367,8 +367,8 @@
     defectMarkers = {};
     defectGroup.clearLayers();
     imageGroup.clearLayers();
-    $.get("http://127.0.0.1:5000/defects", {date: selectedDate}, function (data, status) {
-      var defects = JSON.parse(data);
+    var defectUrl = apiBaseUrl + "station/linuo/date/" + selectedDate + "/defect";
+    $.get(defectUrl, function (defects, status) {
 
       for (var i = 0; i < defects.length; i++) {
         var defect = defects[i];
