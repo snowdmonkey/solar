@@ -2,14 +2,17 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Iterable, Optional, Dict
 
+import torch
 import cv2
 import json
 import numpy as np
 from scipy.cluster.hierarchy import linkage, cut_tree
+from torch.autograd import Variable
 
 # from locate import Station
 from detect_hotspot import HotSpotDetector
 from geo_mapper import GeoMapper
+from fcn.utils import get_panel_group_model
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +80,7 @@ class PanelProfile(RectProfile):
     def __init__(self, points_rc: Tuple[Tuple[int, int], Tuple[int, int]]):
         """
         a panel is assumed to be a rectangle
-        :param points: pixel location of top left vertex and bottom right vertex, i.e. ((row1, col1), (row2, col2)),
+        :param points_rc: pixel location of top left vertex and bottom right vertex, i.e. ((row1, col1), (row2, col2)),
         counting from 0
         """
         RectProfile.__init__(self, points_rc)
@@ -293,8 +296,11 @@ class IRProfiler(ABC):
     The objective is to output the panels and panel groups
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, panel_group_min: int = 2000):
+        """
+        :param panel_group_min: the minimum area of a panel group, in pixels
+        """
+        self._panel_group_min = panel_group_min
 
     @abstractmethod
     def create_profile(self, image_path: str) -> IRProfile:
@@ -305,31 +311,54 @@ class IRProfiler(ABC):
         """
         pass
 
+    @staticmethod
+    def _get_image(image_path: str) -> np.ndarray:
+        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        return img
+
+    @staticmethod
+    def mark_defects(image: np.ndarray, panel_group: PanelGroupProfile):
+        """
+        this method aim to generate defect profiles for a panel group profile and attach them to it
+        :param image: group scale image as numpy array, it serve as the background for the profiling
+        :param panel_group: the panel group profile
+        """
+        sub_img = np.zeros_like(image)
+        cv2.drawContours(sub_img, [panel_group.contour], -1, 255, -1)
+        sub_img[sub_img == 255] = image[sub_img == 255]
+        hot_spot_detector = HotSpotDetector(sub_img, 4.0)
+        hot_spot = hot_spot_detector.get_hot_spot()
+        points = hot_spot.points
+
+        mask = np.zeros_like(image)
+        for point in points:
+            mask[tuple(point)] = 255
+
+        _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
+
+        for cnt in contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            defect = DefectProfile(points_rc=((y, x), (y + h, x + w)))
+            panel_group.add_defect(defect)
+
 
 class ThIRProfiler(IRProfiler):
     """this class does image segmentation based on first order and second order threshold
     """
 
-    def __init__(self, panel_min: int = 100, panel_max: int = 1000, panel_approx_th: int = 5, n_vertex_th: int = 18,
-                 panel_group_min: int = 2000):
+    def __init__(self, panel_min: int = 100, panel_max: int = 1000, panel_approx_th: int = 5, n_vertex_th: int = 18):
         """
         :param panel_min: minimum area for a panel, in pixels
         :param panel_max: maximum area for a panel, in pixels
         :param panel_approx_th: threshold when approximate a polygon
         :param n_vertex_th: if number of vertices is a=larger than this, it is not considered as a pannel
-        :param panel_group_min: the minimum area of a panel group, in pixels
         """
         IRProfiler.__init__(self)
         self._panel_min = panel_min
         self._panel_max = panel_max
         self._approx_th = panel_approx_th
         self._n_vertex_th = n_vertex_th
-        self._panel_group_min = panel_group_min
-
-    @staticmethod
-    def _get_image(image_path: str) -> np.ndarray:
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        return img
 
     def _get_panels(self, img: np.ndarray) -> List[PanelProfile]:
         """
@@ -370,32 +399,6 @@ class ThIRProfiler(IRProfiler):
             x, y, w, h = cv2.boundingRect(cnt)
             panels.append(PanelProfile(((y, x), (y + h, x + w))))
         return panels
-
-    @staticmethod
-    def mark_defects(image: np.ndarray, panel_group: PanelGroupProfile):
-        """
-        this method aim to generate defect profiles for a panel group profile and attach them to it
-        :param image: group scale image as numpy array, it serve as the background for the profiling
-        :param panel_group: the panel group profile
-        """
-        sub_img = np.zeros_like(image)
-        cv2.drawContours(sub_img, [panel_group.contour], -1, 255, -1)
-        sub_img[sub_img == 255] = image[sub_img == 255]
-        hot_spot_detector = HotSpotDetector(sub_img, 4.0)
-        hot_spot = hot_spot_detector.get_hot_spot()
-        points = hot_spot.points
-
-        mask = np.zeros_like(image)
-        for point in points:
-            mask[tuple(point)] = 255
-
-        _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
-
-        for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            defect = DefectProfile(points_rc=((y, x), (y + h, x + w)))
-            panel_group.add_defect(defect)
 
     def create_profile(self, image_path: str) -> IRProfile:
         image = self._get_image(image_path)
@@ -441,6 +444,39 @@ def aggregate_panels(panels: List[PanelProfile]) -> List[PanelGroupProfile]:
             panel_group.add_panel(panels[i])
         panel_groups.append(panel_group)
     return panel_groups
+
+
+class FcnIRProfiler(IRProfiler):
+
+    def __init__(self):
+        super().__init__()
+
+    def _get_panel_groups(self, image: np.ndarray) -> List[PanelGroupProfile]:
+
+        model = get_panel_group_model()
+        model.eval()
+        image = image.reshape(1, 1, image.shape[0], image.shape[1])
+        tensor = torch.from_numpy(image / 255)
+        data = Variable(tensor, volatile=True).float()
+        output = model(data)
+        bs, c, h, w = output.size()
+        _, indices = output.data.max(1)
+        indices = indices.view(bs, h, w)
+        output = indices.numpy()[0]
+        th = np.uint8(output * 255)
+
+        _, contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        return [PanelGroupProfile(cnt) for cnt in contours if cv2.contourArea(cnt) > self._panel_group_min]
+
+    def create_profile(self, image_path: str) -> IRProfile:
+        image = self._get_image(image_path)
+        panel_groups = self._get_panel_groups(image)
+        profile = IRProfile()
+        profile.set_image(image)
+        profile.add_panel_groups(panel_groups)
+        for group in profile.panel_groups:
+            self.mark_defects(image, group)
+        return profile
 
 
 def main():

@@ -17,7 +17,7 @@ from defect_category import DefectCategory
 from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
-from semantic import ThIRProfiler
+from semantic import ThIRProfiler, FcnIRProfiler
 from locate import Station, Positioner, PanelGroup
 
 
@@ -205,7 +205,8 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
     if not os.path.exists(profile_folder_path):
         os.mkdir(profile_folder_path)
 
-    profiler = ThIRProfiler()
+    # profiler = ThIRProfiler()
+    profiler = FcnIRProfiler()
     positioner = Positioner()
     station = Station()
 
