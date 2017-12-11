@@ -121,11 +121,16 @@ paths:
           in: query
           required: false
           type: string
+          enum:
+            - category
+            - severity
           description: the key to sort the defects, can be "category" or "severtiy"
         - name: order
           in: query
           required: false
           type: string
+          enum:
+            - reverse
           description: if order=reverse, the defects will be sorted as descending, otherwise ascending
       produces:
         - application/json
@@ -149,17 +154,35 @@ paths:
           required: true
           type: string
           in: path
-        - name: ids
+        - name: body
           required: true
-          type: array
-          items:
-            type: string
           in: body
-          description: list of defects' id that will be updated
-        - name: category
-          required: true
-          type: integer
-          description: the category set to
+          schema:
+            type: object
+            properties:
+              ids:
+                type: string
+                example: 1,2
+              category:
+                $ref: "#/definitions/DefectCategory"
+#        - name: ids
+#          required: true
+#          type: array
+#          items:
+#            type: string
+#          in: body
+#          description: list of defects' id that will be updated
+#        - name: category
+#          in: body
+#          required: true
+#          schema:
+#            type: integer
+#            enum:
+#              - -1
+#              - 0
+#              - 1
+#              - 2
+#          description: the category set to
       produces:
         - text/plain
       responses:
@@ -246,6 +269,7 @@ paths:
           in: path
           required: true
         - name: colorMap
+#          schema:
           type: string
           enum:
             - autumn
