@@ -8,6 +8,8 @@ COPY requirements.txt ./
 COPY 3rd-party/Image-ExifTool-10.61.tar.gz ./
 
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install http://download.pytorch.org/whl/cu75/torch-0.2.0.post3-cp36-cp36m-manylinux1_x86_64.whl \
+    && pip3 install torchvision
 
 RUN tar zfx Image-ExifTool-10.61.tar.gz \
     && cd Image-ExifTool-10.61 \
