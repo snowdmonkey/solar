@@ -97,7 +97,7 @@ paths:
             items:
               $ref: "#/definitions/Date"
 
-  /api/v1/station/{stationId}/date/{date}/defect:
+  /api/v1/station/{stationId}/date/{date}/defects:
     get:
       tags:
         - defects
@@ -112,6 +112,21 @@ paths:
           name: date
           required: true
           type: string
+        - in: query
+          name: category
+          required: false
+          type: string
+          description: e.g., ?category=1,2 will query defects with category 1 or 2
+        - name: sortby
+          in: query
+          required: false
+          type: string
+          description: the key to sort the defects, can be "category" or "severtiy"
+        - name: order
+          in: query
+          required: false
+          type: string
+          description: if order=reverse, the defects will be sorted as descending, otherwise ascending
       produces:
         - application/json
       responses:
@@ -121,6 +136,37 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Defect"
+    put:
+      tags:
+        - defects
+      summary: batch set the category of defects
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          required: true
+          type: string
+          in: path
+        - name: ids
+          required: true
+          type: array
+          items:
+            type: string
+          in: body
+          description: list of defects' id that will be updated
+        - name: category
+          required: true
+          type: integer
+          description: the category set to
+      produces:
+        - text/plain
+      responses:
+        "200":
+          description: "success"
+
+  /api/v1/station/{stationId}/date/{date}/analysis:
     put:
       tags:
         - defects
@@ -181,11 +227,11 @@ paths:
         "200":
           description: "success"
 
-  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/image:
+  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/ir:
     get:
       tags:
         - images
-      summary: get a list of image names
+      summary: get a list of IR images relate to a defect
       parameters:
         - name: stationId
           type: string
@@ -199,7 +245,25 @@ paths:
           type: string
           in: path
           required: true
-      description: "get the names of the images that captures a defect"
+        - name: colorMap
+          type: string
+          enum:
+            - autumn
+            - bone
+            - jet
+            - winter
+            - rainbow
+            - ocean
+            - summer
+            - spring
+            - cool
+            - hsv
+            - pink
+            - hot
+          in: query
+          required: false
+          description: color map for the ir image
+      description: "a list of IR images that captures a defect"
       produces:
         - application/json
       responses:
@@ -216,6 +280,46 @@ paths:
                   type: number
                 longitude:
                   type: number
+                url:
+                  type: string
+
+  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/visual:
+    get:
+      tags:
+        - images
+      summary: get a list of visual images relate to a defect
+      parameters:
+        - name: stationId
+          type: string
+          in: path
+          required: true
+        - name: date
+          type: string
+          in: path
+          required: true
+        - name: defectId
+          type: string
+          in: path
+          required: true
+      description: "a list of visual images that relates a defect"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: "success"
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                imageName:
+                  $ref: "#/definitions/ImageName"
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                url:
+                  type: string
 
   /api/v1/station/{stationId}/date/{date}/image/ir/{image}:
     get:
@@ -301,15 +405,15 @@ paths:
           required: true
           description: "base name of a image"
         - name: row
-          type: integer
+          type: number
           in: query
           required: true
-          description: "row number of the given pixel, counting from 0"
+          description: "row number of the given pixel scaled by the height of the image"
         - name: col
-          type: integer
+          type: number
           in: query
           required: true
-          description: "column number of the given pixel, counting from 0"
+          description: "column number of the given pixel scaled by the width of the image"
       produces:
         - application/json
       responses:
@@ -347,22 +451,22 @@ paths:
           type: integer
           in: query
           required: true
-          description: "top row number of the given range, counting from 0"
+          description: "top row number of the given range scaled by the height of the image"
         - name: btm
           type: integer
           in: query
           required: true
-          description: "bottom row number of the given range, counting from 0"
+          description: "bottom row number of the given range scaled by the height of the image"
         - name: left
           type: integer
           in: query
           required: true
-          description: "left column number of the given range, counting from 0"
+          description: "left column number of the given range scaled by the width of the image"
         - name: right
           type: integer
           in: query
           required: true
-          description: "right column number of the given range, counting from 0"
+          description: "right column number of the given range scaled by the width of the image"
       produces:
         - application/json
       responses:
@@ -442,11 +546,13 @@ definitions:
         $ref: "#/definitions/DefectCategory"
       groupId:
         type: string
+      severity:
+        type: number
 
   DefectCategory:
     type: integer
-    enum: [1, 0, -1]
-    description: 1 means a confirmed defect, 0 means not yet confirmed, -1 means confirm not a defect, i.e., false alarm
+    enum: [-1, 0, 1, 2]
+    description: -1 means warning, 0 means pending confirmation, 1 means under repairing, i.e., 2 means healthy
 
   ImageName:
     type: string

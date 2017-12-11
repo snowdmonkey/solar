@@ -10,6 +10,7 @@ import cv2
 import io
 import logging
 import os
+import pymongo
 
 app = Flask(__name__)
 CORS(app)
@@ -75,6 +76,10 @@ def get_panel_group_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("panelGroup")
 
 
+def get_defect_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("defect")
+
+
 @app.route("/api/v1/station", methods=["GET"])
 def get_station_list():
     """
@@ -134,29 +139,66 @@ def get_reports_by_date_station(station: str):
     return jsonify(posts)
 
 
-@app.route("/api/v1/station/<string:station>/date/<string:date>/defect", methods=["GET"])
-def get_defect_by_date_and_station(station: str, date: str):
+@app.route("/api/v1/station/<string:station>/date/<string:date>/defects", methods=["GET"])
+def get_defects_by_date_and_station(station: str, date: str):
     """
     return a defect list by station and date
     """
-    defect_summary = get_defects_summary(station, date)
-    if defect_summary is None:
-        abort(404)
+    # defect_summary = get_defects_summary(station, date)
+
+    cat_str = request.args.get("category")
+    defect_coll = get_defect_collection()
+
+    if cat_str is None:
+        defects = defect_coll.find({"station": station, "date": date}, {"_id": False})
     else:
-        defects = list()
-        for d in defect_summary:
-            defect = {
-                "defectId": d.get("defectId"),
-                "latitude": d.get("lat"),
-                "longitude": d.get("lng"),
-                "category": d.get("category"),
-                "groupId": d.get("group")
-            }
-            defects.append(defect)
-        return jsonify(defects)
+        categories = [int(x) for x in cat_str.split(",")]
+        defects = defect_coll.find({"station": station, "date": date, "category": {"$in": categories}}, {"_id": False})
+
+    sort_key = request.args.get("sortby")
+    if sort_key is not None:
+        if sort_key in ("category", "severity"):
+            sort_order = request.args.get("order")
+            if sort_order is None:
+                defects.sort(sort_key)
+            elif sort_order == "reverse":
+                defects.sort(sort_key, pymongo.DESCENDING)
+            else:
+                abort(400, "unknown order")
+        else:
+            abort(400, "unknown sort key")
+
+    results = list()
+    for post in defects:
+        defect = {
+            "defectId": post.get("defectId"),
+            "latitude": post.get("lat"),
+            "longitude": post.get("lng"),
+            "category": post.get("category"),
+            "groupId": post.get("group"),
+            "severity": post.get("severity")
+        }
+        results.append(defect)
+
+    return jsonify(results)
+    # if defect_summary is None:
+    #     abort(404)
+    # else:
+    #     defects = list()
+    #     for d in defect_summary:
+    #         defect = {
+    #             "defectId": d.get("defectId"),
+    #             "latitude": d.get("lat"),
+    #             "longitude": d.get("lng"),
+    #             "category": d.get("category"),
+    #             "groupId": d.get("group"),
+    #             "severity": d.get("severity")
+    #         }
+    #         defects.append(defect)
+    #     return jsonify(defects)
 
 
-@app.route("/api/v1/station/<string:station>/date/<string:date>/defect", methods=["PUT"])
+@app.route("/api/v1/station/<string:station>/date/<string:date>/analysis", methods=["PUT"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
     pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
@@ -186,33 +228,63 @@ def set_defect_by_id(station: str, date: str, defect_id: str):
                                      {"$set": {"lng": lng}})
     if cat is not None:
         defect_collection.update_one({"station": station, "date": date, "defectId": defect_id},
-                                     {"$set": {"category".format(defect_id): cat}})
+                                     {"$set": {"category": cat}})
     return "OK"
 
 
-@app.route("/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>/image", methods=["GET"])
-def get_images_by_defect(station: str, date: str, defect_id: str):
+@app.route("/api/v1/station/<string:station>/date/<string:date>/defects", methods=["PUT"])
+def set_defects(station: str, date: str):
     """
-    return a json string which contains the names of the images relating to a defect
+    set defects' category by batch
+    """
+    post_body = request.get_json()
+    ids = post_body.get("ids")
+    category = post_body.get("category")
+
+    defect_coll = get_defect_collection()
+    for defect_id in ids:
+        defect_coll.update({"station": station, "date": date, "defectId": defect_id},
+                           {"$set": {"category": category}})
+    return "OK"
+
+
+@app.route("/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+def get_ir_images_by_defect(station: str, date: str, defect_id: str):
+    """
+    return a json string which contains the details of the images relating to a defect
     :return: json string
     """
-    defect_info = get_mongo_client().get_database("solar")\
-        .get_collection("defect")\
-        .find_one({"station": station, "date": date, "defectId": defect_id})
-    image_names = [x.get("image") for x in defect_info.get("rects")]
+    defect_info = get_defect_collection().find_one({"station": station, "date": date, "defectId": defect_id})
+    # defect_info = get_mongo_client().get_database("solar")\
+    #     .get_collection("defect")\
+    #     .find_one({"station": station, "date": date, "defectId": defect_id})
+    image_names = {x.get("image") for x in defect_info.get("rects")}
+    color_map = request.args.get("colorMap")
+    if color_map is not None:
+        if color_map not in ("autumn", "bone", "jet", "winter", "rainbow", "ocean",
+                             "summer", "spring", "cool", "hsv", "pink", "hot"):
+            abort(400, "unknown color map")
 
     results = list()
-    # exif = get_exif(station, date)
-    # if exif is None:
-    #     abort(404)
+
     for image_name in image_names:
-        # latitude = exif.get(image_name).get("GPSLatitude")
-        # longitude = exif.get(image_name).get("GPSLongitude")
         exif = get_exif(station=station, date=date, image=image_name)
         lat = exif.get("GPSLatitude")
         lng = exif.get("GPSLongitude")
-        results.append({"imageName": image_name, "latitude": lat, "longitude": lng})
+        image_url = "/api/v1/station/{}/date/{}/image/ir/{}?defect={}".format(station, date, image_name, defect_id)
+        if color_map is not None:
+            image_url += "&colorMap={}".format(color_map)
+        results.append({"imageName": image_name, "latitude": lat, "longitude": lng, "url": image_url})
     return jsonify(results)
+
+
+@app.route("/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+def get_visual_images_by_defect(station: str, date: str, defect_id: str):
+    """
+    return a json string that contains the details of visual images relating to a defect
+    """
+    # TODO implement how to get a visual image with the same scope of an ir image
+    pass
 
 
 @app.route("/api/v1/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
@@ -363,10 +435,14 @@ def get_point_temperature(station: str, date: str, image: str):
                                   pf=exif.get("PlanckF"),
                                   po=exif.get("PlanckO"),
                                   pr2=exif.get("PlanckR2"))
-    row = int(request.args.get("row"))
-    col = int(request.args.get("col"))
+    row_ratio = float(request.args.get("row"))
+    col_ratio = float(request.args.get("col"))
     raw = cv2.imread(join(get_image_root(), station, date, "ir", "rotated-raw", "{}.tif".format(image)),
                      cv2.IMREAD_ANYDEPTH)
+    n_row, n_col = raw.shape
+    row = int(row_ratio * n_row)
+    col = int(col_ratio * n_col)
+
     result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
 
     return jsonify(result)
