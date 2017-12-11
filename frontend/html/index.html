@@ -232,16 +232,16 @@
   var minMapLayerGroup = L.layerGroup([osm2, imageOverlay2]);
   L.control.minimap(minMapLayerGroup, {toggleDisplay: true, minimized: false}).addTo(mymap);
 
-//  $.get("http://127.0.0.1:5000/api/v1/station/linuo/panel_group", function(data){
-//    data.forEach(function(panelGroup){
-//      var vertices = panelGroup.vertices;
-//      var latlngs = [];
-//      vertices.forEach(function(vertex){
-//        latlngs.push(vertex);
-//      });
-//      L.polygon(latlngs, {color: "red"}).addTo(mymap);
-//    })
-//  });
+  $.get("http://127.0.0.1:5000/api/v1/station/linuo/panel_group", function(data){
+    data.forEach(function(panelGroup){
+      var vertices = panelGroup.vertices;
+      var latlngs = [];
+      vertices.forEach(function(vertex){
+        latlngs.push(vertex);
+      });
+      L.polygon(latlngs, {color: "red"}).addTo(mymap);
+    })
+  });
 
 
   //  add leaflet printer plugin

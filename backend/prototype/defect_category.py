@@ -1,5 +1,7 @@
 class DefectCategory:
 
+    REPAIRING = 1
     UNCONFIRMED = 0
-    CONFIRMED = 1
-    CANCELED = -1
+    WARN = -1
+    HEALTHY = 2
+

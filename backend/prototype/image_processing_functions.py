@@ -1,30 +1,29 @@
 # import exifread
+import base64
 import json
 import logging
 import os
-import base64
 import subprocess
-import utm
 from os import listdir
 from os.path import join, basename
 from typing import Union, List, Dict
 
 import cv2
 import numpy as np
+import utm
 from scipy.cluster.hierarchy import linkage, cut_tree
 
 from defect_category import DefectCategory
 from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
-from semantic import ThIRProfiler, FcnIRProfiler
 from locate import Station, Positioner, PanelGroup
-
+from semantic import FcnIRProfiler
 
 logger = logging.getLogger(__name__)
 
 
-def _get_raw_from_string(s: str, depth: int=16) -> np.ndarray:
+def _get_raw_from_string(s: str, depth: int = 16) -> np.ndarray:
     """
     return an image from a base64 encoded string
     :param s: base64 encoded string
@@ -168,7 +167,7 @@ def batch_process_label(folder_path: str) -> List[dict]:
             rectangles = list()
             for cnt in contours:
                 x, y, w, h = cv2.boundingRect(cnt)
-                if h < 200*w:
+                if h < 200 * w:
                     rectangles.append((x, y, w, h))
             if len(rectangles) > 0:
                 result = dict()
@@ -256,12 +255,13 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
             for defect in panel_group.defects:
                 rect = {"x": defect.points_xy[0][0],
                         "y": defect.points_xy[0][1],
-                        "w": defect.points_xy[1][0]-defect.points_xy[0][0],
-                        "h": defect.points_xy[1][1]-defect.points_xy[0][1],
+                        "w": defect.points_xy[1][0] - defect.points_xy[0][0],
+                        "h": defect.points_xy[1][1] - defect.points_xy[0][1],
                         "easting": defect.utm[0],
                         "northing": defect.utm[1],
                         "utm_zone": defect.utm[2],
-                        "panel_group_id": panel_group.panel_group_id}
+                        "panel_group_id": panel_group.panel_group_id,
+                        "severity": defect.severity}
                 rects.append(rect)
         if len(rects) > 0:
             result = {"image": base_name, "height": image_height, "width": image_width, "rects": rects}
@@ -319,18 +319,20 @@ def batch_process_aggregate(folder_path: str, group_criteria: float) -> List[dic
 
         for i in range(len(rects_match_id)):
             rects_match_id[i].update({"defectId": "DEF{:05d}".format(cluster[i] + defect_num)})
-        defect_num += max(cluster)+1
+        defect_num += max(cluster) + 1
 
         defect_id_set = set([x.get("defectId") for x in rects_match_id])
         for defect_id in defect_id_set:
-            defect = {"defectId": defect_id, "panelGroupId": group_id,"category": DefectCategory.UNCONFIRMED}
+            defect = {"defectId": defect_id, "panelGroupId": group_id, "category": DefectCategory.UNCONFIRMED}
             rect_match_defect = [x for x in rects_match_id if x.get("defectId") == defect_id]
 
             easting = float(np.mean([x.get("easting") for x in rect_match_defect]))
             northing = float(np.mean([x.get("northing") for x in rect_match_defect]))
+            severity = float(np.mean([x.get("severity") for x in rects_match_id]))
             utm_zone = rects_match_id[0].get("utm_zone")
             lat, lng = utm.to_latlon(easting, northing, utm_zone, northern=True)
-            defect.update({"lat": lat, "lng": lng, "utmEasting": easting, "utmNorthing": northing, "utmZone": utm_zone})
+            defect.update({"lat": lat, "lng": lng, "utmEasting": easting, "utmNorthing": northing,
+                           "utmZone": utm_zone, "severity": severity})
             defect.update({"rects": [x for x in rect_match_defect]})
 
             defects.append(defect)
@@ -381,37 +383,37 @@ def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) ->
             defects.append({"image": base_name, "utm_easting": utm_easting, "utm_northing": utm_northing,
                             "utm_zone": utm_zone, "rect": rect})
 
-    # for image_name, value in rect_info.items():
-    #     base_name = os.path.splitext(basename(image_name))[0]
-    #     image_latitude = exif.get(base_name).get("GPSLatitude")
-    #     image_longitude = exif.get(base_name).get("GPSLongitude")
-    #
-    #     for rect in value["rects"]:
-    #         x_small_image = rect.get("x")
-    #         y_small_image = rect.get("y")
-    #
-    #         x_shift_small_image = x_small_image - (value["width"] - 1) / 2
-    #         y_shift_small_image = y_small_image - (value["height"] - 1) / 2
-    #
-    #         x_shift_large_image = x_shift_small_image / pixel_ratio
-    #         y_shift_large_image = y_shift_small_image / pixel_ratio
-    #
-    #         y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
-    #
-    #         x_large_image = x_center_large_image + x_shift_large_image
-    #         y_large_image = y_center_large_image + y_shift_large_image
-    #
-    #         defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
-    #                         "rect": rect})
+            # for image_name, value in rect_info.items():
+            #     base_name = os.path.splitext(basename(image_name))[0]
+            #     image_latitude = exif.get(base_name).get("GPSLatitude")
+            #     image_longitude = exif.get(base_name).get("GPSLongitude")
+            #
+            #     for rect in value["rects"]:
+            #         x_small_image = rect.get("x")
+            #         y_small_image = rect.get("y")
+            #
+            #         x_shift_small_image = x_small_image - (value["width"] - 1) / 2
+            #         y_shift_small_image = y_small_image - (value["height"] - 1) / 2
+            #
+            #         x_shift_large_image = x_shift_small_image / pixel_ratio
+            #         y_shift_large_image = y_shift_small_image / pixel_ratio
+            #
+            #         y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
+            #
+            #         x_large_image = x_center_large_image + x_shift_large_image
+            #         y_large_image = y_center_large_image + y_shift_large_image
+            #
+            #         defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
+            #                         "rect": rect})
 
-#     grouping the defects according to pixel distance on the stitched image
+        #     grouping the defects according to pixel distance on the stitched image
     pixel_location_table = np.array([[x.get("utm_easting"), x.get("utm_northing")] for x in defects])
     linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
 
     ctree = cut_tree(linkage_matrix, height=[group_criteria])
     cluster = np.array([x[0] for x in ctree])
     cluster_centroids = list()
-    for i in range(max(cluster)+1):
+    for i in range(max(cluster) + 1):
         x_center = np.mean(pixel_location_table[cluster == i, 0])
         y_center = np.mean(pixel_location_table[cluster == i, 1])
         cluster_centroids.append([x_center, y_center])

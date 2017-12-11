@@ -2,14 +2,20 @@ import sys
 from extract_rect import PanelCropper
 import numpy as np
 from matplotlib import pyplot as plt
+from typing import Optional
 
 
 class HotSpot:
 
-    def __init__(self, points=None, absolute_brightness=None, relative_brightness=None):
+    def __init__(self, points=None, absolute_brightness=None, relative_brightness=None,
+                 severity: Optional[float] = None, bg_mean: Optional[float] = None,
+                 bg_sd: Optional[float] = None):
         self.points = points
         self.absolute_brightness = absolute_brightness
         self.relative_brightness = relative_brightness
+        self.severity = severity
+        self.bg_mean = bg_mean
+        self.bg_sd = bg_sd
 
 
 class HotSpotDetector:
@@ -43,12 +49,18 @@ class HotSpotDetector:
                 hot_data.append(img[tuple(coord)])
             absolute_brightness = np.mean(hot_data)
             relative_brightness = absolute_brightness - mu
+            severity = relative_brightness/sd
+            bg_mean = mu
+            bg_sd = sd
         else:
             absolute_brightness = None
             relative_brightness = None
-        self.hot_spot = HotSpot(points, absolute_brightness, relative_brightness)
+            severity = None
+            bg_mean = None
+            bg_sd = None
+        self.hot_spot = HotSpot(points, absolute_brightness, relative_brightness, severity, bg_mean, bg_sd)
 
-    def get_hot_spot(self):
+    def get_hot_spot(self) -> HotSpot:
         if self.hot_spot is None:
             self._calculate_hot_spot()
         return self.hot_spot

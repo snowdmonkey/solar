@@ -89,7 +89,7 @@ class PanelProfile(RectProfile):
 class DefectProfile(RectProfile):
     """this class describes a defect on an IR image"""
 
-    def __init__(self, points_rc: Tuple[Tuple[int, int], Tuple[int, int]]):
+    def __init__(self, points_rc: Tuple[Tuple[int, int], Tuple[int, int]], severity: float):
         """
         a defect profile is assumed to be a rectangle area.
         :param points_rc: the pixel position of the top-left corner and bottom-right corner, in format of (row, col)
@@ -98,6 +98,7 @@ class DefectProfile(RectProfile):
 
         self._gps = None
         self._utm = None
+        self._severity = severity
 
     @property
     def gps(self) -> Optional[Tuple[float, float]]:
@@ -112,6 +113,10 @@ class DefectProfile(RectProfile):
         utm of the top left point, in format of (easting, northing, zone_number)
         """
         return self._utm
+
+    @property
+    def severity(self) -> float:
+        return self._severity
 
     def set_gps(self, gps: Tuple[float, float]):
         self._gps = gps
@@ -339,7 +344,12 @@ class IRProfiler(ABC):
 
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            defect = DefectProfile(points_rc=((y, x), (y + h, x + w)))
+            mask = np.zeros_like(image)
+            cv2.drawContours(mask, [cnt], -1, 255, -1)
+            defect_mean = cv2.mean(image, mask)[0]
+            severity = (defect_mean-hot_spot.bg_mean) / hot_spot.bg_sd
+
+            defect = DefectProfile(points_rc=((y, x), (y + h, x + w)), severity=severity)
             panel_group.add_defect(defect)
 
 
@@ -487,7 +497,8 @@ def main():
     parser.add_argument("img", type=str, help="path of an IR image")
     args = parser.parse_args()
 
-    segmentor = ThIRProfiler()
+    # segmentor = ThIRProfiler()
+    segmentor = FcnIRProfiler()
     profile = segmentor.create_profile(args.img)
     img = profile.draw()
     cv2.imshow("img", img)
