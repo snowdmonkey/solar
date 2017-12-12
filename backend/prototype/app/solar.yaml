@@ -29,12 +29,12 @@ paths:
     get:
       tags:
         - station
-      summary: "get available stations"
-      description: ""
+      summary: get available stations
+      description: ''
       produces:
         - application/json
       responses:
-        "200":
+        '200':
           description: success
           schema:
             type: array
@@ -43,7 +43,7 @@ paths:
     post:
       tags:
         - station
-      summary: "add a station"
+      summary: add a station
       produces:
         - text/plain
       parameters:
@@ -53,15 +53,14 @@ paths:
           schema:
             $ref: '#/definitions/Station'
       responses:
-        "200":
+        '200':
           description: success
-
-  /api/v1/station/{stationId}:
+  '/api/v1/station/{stationId}':
     get:
       tags:
         - station
       summary: get a station
-      description: "get the information of a station by id"
+      description: get the information of a station by id
       produces:
         - application/json
       parameters:
@@ -69,45 +68,153 @@ paths:
           type: string
           in: path
           required: true
-          description: e.g., linuo
+          description: 'e.g., linuo'
       responses:
-        "200":
-          description: "success"
-        "404":
-          description: "station not found"
-
-  /api/v1/station/{stationId}/date:
+        '200':
+          description: success
+        '404':
+          description: station not found
+  /api/v1/station/status:
     get:
       tags:
-        - date
-      summary: "get the dates of available reports of a station"
+        - station
+      summary: get status of all available stations
+      description: status includes station info and summary of last inspection
       produces:
         - application/json
-      parameters:
-        - name: stationId
-          in: path
-          required: true
-          type: string
-          description: e.g., linuo
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: OK
           schema:
             type: array
             items:
-              $ref: "#/definitions/Date"
-
-  /api/v1/station/{stationId}/date/{date}/defects:
+              $ref: '#/definitions/StationInfo'
+        '400':
+          description: Bad request
+  '/api/v1/station/{stationId}/status/date/{date}':
+    get:
+      tags:
+        - station
+      summary: get status of the specific station and date
+      description: >-
+        status includes the numbers of the defect categories: healthy,
+        toconfirm, tofix, and also the date
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          type: string
+          description: 'e.g., LN0001'
+        - name: date
+          in: path
+          required: true
+          type: string
+          description: date string in YYYY-MM-DD
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/StationStatus'
+        '404':
+          description: Status info not found on the date of the station
+  '/api/v1/station/{stationId}/status/start/{start}/end/{end}':
+    get:
+      tags:
+        - station
+      summary: get status of the specific station and the time period
+      description: >-
+        status includes the numbers of the defect categories: healthy,
+        toconfirm, tofix, and also the date
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          type: string
+          description: 'e.g., LN0001'
+        - name: start
+          in: path
+          required: true
+          type: string
+          description: start date string in YYYY-MM-DD
+        - name: end
+          in: path
+          required: true
+          type: string
+          description: end date string in YYYY-MM-DD
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/StationStatus'
+        '404':
+          description: Status info not found on the period of the station
+  '/api/v1/station/{stationId}/status/start/{start}':
+    get:
+      tags:
+        - station
+      summary: get status of the specific station since the start date
+      description: >-
+        status includes the numbers of the defect categories: healthy,
+        toconfirm, tofix, and also the date
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          type: string
+          description: 'e.g., LN0001'
+        - name: start
+          in: path
+          required: true
+          type: string
+          description: start date string in YYYY-MM-DD
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/StationStatus'
+        '404':
+          description: Status info not found on the period of the station
+  '/api/v1/station/{stationId}/date':
+    get:
+      tags:
+        - date
+      summary: get the dates of available reports of a station
+      produces:
+        - application/json
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          type: string
+          description: 'e.g., LN0001'
+      responses:
+        '200':
+          description: success
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Date'
+  '/api/v1/station/{stationId}/date/{date}/defects':
     get:
       tags:
         - defects
-      summary: "get a list of defects by station and date"
+      summary: get a list of defects by station and date
       parameters:
         - name: stationId
           type: string
           in: path
           required: true
-          description: e.g., linuo
+          description: 'e.g., linuo'
         - in: path
           name: date
           required: true
@@ -116,7 +223,7 @@ paths:
           name: category
           required: false
           type: string
-          description: e.g., ?category=1,2 will query defects with category 1 or 2
+          description: 'e.g., ?category=1,2 will query defects with category 1 or 2'
         - name: sortby
           in: query
           required: false
@@ -124,23 +231,25 @@ paths:
           enum:
             - category
             - severity
-          description: the key to sort the defects, can be "category" or "severtiy"
+          description: 'the key to sort the defects, can be "category" or "severtiy"'
         - name: order
           in: query
           required: false
           type: string
           enum:
             - reverse
-          description: if order=reverse, the defects will be sorted as descending, otherwise ascending
+          description: >-
+            if order=reverse, the defects will be sorted as descending,
+            otherwise ascending
       produces:
         - application/json
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: success
           schema:
             type: array
             items:
-              $ref: "#/definitions/Defect"
+              $ref: '#/definitions/Defect'
     put:
       tags:
         - defects
@@ -162,45 +271,28 @@ paths:
             properties:
               ids:
                 type: string
-                example: 1,2
+                example: '1,2'
               category:
-                $ref: "#/definitions/DefectCategory"
-#        - name: ids
-#          required: true
-#          type: array
-#          items:
-#            type: string
-#          in: body
-#          description: list of defects' id that will be updated
-#        - name: category
-#          in: body
-#          required: true
-#          schema:
-#            type: integer
-#            enum:
-#              - -1
-#              - 0
-#              - 1
-#              - 2
-#          description: the category set to
+                $ref: '#/definitions/DefectCategory'
       produces:
         - text/plain
       responses:
-        "200":
-          description: "success"
-
-  /api/v1/station/{stationId}/date/{date}/analysis:
+        '200':
+          description: success
+  '/api/v1/station/{stationId}/date/{date}/analysis':
     put:
       tags:
         - defects
       summary: image analysis trigger
-      description: "trigger the analysis create_profile of a batch of images by station and date"
+      description: >-
+        trigger the analysis create_profile of a batch of images by station and
+        date
       parameters:
         - name: stationId
           type: string
           in: path
           required: true
-          description: e.g., linuo
+          description: 'e.g., linuo'
         - name: date
           type: string
           in: path
@@ -208,17 +300,16 @@ paths:
       produces:
         - text/plain
       responses:
-        "200":
-          description: "success"
-
-  /api/v1/station/{stationId}/date/{date}/defect/{defectId}:
+        '200':
+          description: success
+  '/api/v1/station/{stationId}/date/{date}/defect/{defectId}':
     put:
       tags:
         - defects
-      summary: "set a defect's category and gps"
+      summary: set a defect's category and gps
       parameters:
         - name: stationId
-          description: e.g., linuo
+          description: 'e.g., linuo'
           type: string
           in: path
           required: true
@@ -243,14 +334,13 @@ paths:
                 type: number
                 example: 117.2324184458665
               cat:
-                $ref: "#/definitions/DefectCategory"
+                $ref: '#/definitions/DefectCategory'
       produces:
         - text/plain
       responses:
-        "200":
-          description: "success"
-
-  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/ir:
+        '200':
+          description: success
+  '/api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/ir':
     get:
       tags:
         - images
@@ -269,7 +359,6 @@ paths:
           in: path
           required: true
         - name: colorMap
-#          schema:
           type: string
           enum:
             - autumn
@@ -287,27 +376,26 @@ paths:
           in: query
           required: false
           description: color map for the ir image
-      description: "a list of IR images that captures a defect"
+      description: a list of IR images that captures a defect
       produces:
         - application/json
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: success
           schema:
             type: array
             items:
               type: object
               properties:
                 imageName:
-                  $ref: "#/definitions/ImageName"
+                  $ref: '#/definitions/ImageName'
                 latitude:
                   type: number
                 longitude:
                   type: number
                 url:
                   type: string
-
-  /api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/visual:
+  '/api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/visual':
     get:
       tags:
         - images
@@ -325,27 +413,26 @@ paths:
           type: string
           in: path
           required: true
-      description: "a list of visual images that relates a defect"
+      description: a list of visual images that relates a defect
       produces:
         - application/json
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: success
           schema:
             type: array
             items:
               type: object
               properties:
                 imageName:
-                  $ref: "#/definitions/ImageName"
+                  $ref: '#/definitions/ImageName'
                 latitude:
                   type: number
                 longitude:
                   type: number
                 url:
                   type: string
-
-  /api/v1/station/{stationId}/date/{date}/image/ir/{image}:
+  '/api/v1/station/{stationId}/date/{date}/image/ir/{image}':
     get:
       tags:
         - images
@@ -363,26 +450,37 @@ paths:
           type: string
           in: path
           required: true
-          description: "base name of a image"
+          description: base name of a image
         - name: colorMap
           type: string
-          enum: ["autumn", "bone","jet","winter","rainbow","ocean","summer","spring","cool","hsv","pink","hot"]
+          enum:
+            - autumn
+            - bone
+            - jet
+            - winter
+            - rainbow
+            - ocean
+            - summer
+            - spring
+            - cool
+            - hsv
+            - pink
+            - hot
           in: query
           required: false
-          description: "if not provided, render a gray scale image"
+          description: 'if not provided, render a gray scale image'
         - name: defect
           type: string
           in: query
           required: false
-          description: "if it is given, label the defect on the map"
-      description: "get the infrared image by image name, also can label a given defect"
+          description: 'if it is given, label the defect on the map'
+      description: 'get the infrared image by image name, also can label a given defect'
       produces:
         - image/png
       responses:
-        "200":
-          description: "success"
-
-  /api/v1/station/{stationId}/date/{date}/image/visual/{image}:
+        '200':
+          description: success
+  '/api/v1/station/{stationId}/date/{date}/image/visual/{image}':
     get:
       tags:
         - images
@@ -399,21 +497,20 @@ paths:
           type: string
           in: path
           required: true
-          description: "base name of a image"
-      description: "get visible ligth image by station, date and image name"
-      summary: "get a visible light image"
+          description: base name of a image
+      description: 'get visible ligth image by station, date and image name'
+      summary: get a visible light image
       produces:
         - image/png
       responses:
-        "200":
-          description: "success"
-
-  /api/v1/station/{stationId}/date/{date}/image/{image}/temperature/point:
+        '200':
+          description: success
+  '/api/v1/station/{stationId}/date/{date}/image/{image}/temperature/point':
     get:
       tags:
         - temperature
-      summary: "get temperature at a pixel"
-      description: "get celsius temperature at a given pixel on an IR image"
+      summary: get temperature at a pixel
+      description: get celsius temperature at a given pixel on an IR image
       parameters:
         - name: stationId
           type: string
@@ -427,36 +524,34 @@ paths:
           type: string
           in: path
           required: true
-          description: "base name of a image"
+          description: base name of a image
         - name: row
           type: number
           in: query
           required: true
-          description: "row number of the given pixel scaled by the height of the image"
+          description: row number of the given pixel scaled by the height of the image
         - name: col
           type: number
           in: query
           required: true
-          description: "column number of the given pixel scaled by the width of the image"
+          description: column number of the given pixel scaled by the width of the image
       produces:
         - application/json
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: success
           schema:
             type: object
             properties:
               temperature:
                 type: number
-                example:
-                  56.1
-
-  /api/v1/station/{stationId}/date/{date}/image/{image}/temperature/range:
+                example: 56.1
+  '/api/v1/station/{stationId}/date/{date}/image/{image}/temperature/range':
     get:
       tags:
         - temperature
-      summary: "get temperature in a range"
-      description: "get statistics of Celsius temperature in a rectangle area on an IR image"
+      summary: get temperature in a range
+      description: get statistics of Celsius temperature in a rectangle area on an IR image
       parameters:
         - name: stationId
           type: string
@@ -470,32 +565,38 @@ paths:
           type: string
           in: path
           required: true
-          description: "base name of a image"
+          description: base name of a image
         - name: top
           type: integer
           in: query
           required: true
-          description: "top row number of the given range scaled by the height of the image"
+          description: top row number of the given range scaled by the height of the image
         - name: btm
           type: integer
           in: query
           required: true
-          description: "bottom row number of the given range scaled by the height of the image"
+          description: >-
+            bottom row number of the given range scaled by the height of the
+            image
         - name: left
           type: integer
           in: query
           required: true
-          description: "left column number of the given range scaled by the width of the image"
+          description: >-
+            left column number of the given range scaled by the width of the
+            image
         - name: right
           type: integer
           in: query
           required: true
-          description: "right column number of the given range scaled by the width of the image"
+          description: >-
+            right column number of the given range scaled by the width of the
+            image
       produces:
         - application/json
       responses:
-        "200":
-          description: "success"
+        '200':
+          description: success
           schema:
             type: object
             properties:
@@ -521,41 +622,38 @@ paths:
                     type: integer
                   row:
                     type: integer
-
 definitions:
   Date:
     type: string
-    example: "2017-09-19"
-
+    example: '2017-09-19'
   GPS:
-    type: array[2]
+    type: array
     items:
       type: number
-    example: [36.6551991831705, 117.2324184458665]
-    description: latitude, longitude
-
+    example:
+      - 36.6551991831705
+      - 117.2324184458665
+    description: 'latitude, longitude'
   StationId:
     type: string
     example: linuo
-
   Station:
     type: object
     properties:
       stationId:
-        $ref: "#/definitions/StationId"
+        $ref: '#/definitions/StationId'
       stationName:
         type: string
-        example: "linuo"
+        example: linuo
       description:
         type: string
-        example: "test station"
+        example: test station
       gps:
-        $ref: "#/definitions/GPS"
+        $ref: '#/definitions/GPS'
     required:
       - stationId
       - stationName
       - gps
-
   Defect:
     type: object
     properties:
@@ -567,17 +665,40 @@ definitions:
       longitude:
         type: number
       category:
-        $ref: "#/definitions/DefectCategory"
+        $ref: '#/definitions/DefectCategory'
       groupId:
         type: string
       severity:
         type: number
-
   DefectCategory:
     type: integer
-    enum: [-1, 0, 1, 2]
-    description: -1 means warning, 0 means pending confirmation, 1 means under repairing, i.e., 2 means healthy
-
+    enum:
+      - -1
+      - 0
+      - 1
+      - 2
+    description: >-
+      -1 means warning, 0 means pending confirmation, 1 means under repairing,
+      i.e., 2 means healthy
   ImageName:
     type: string
     example: DJI_0004
+  StationInfo:
+    type: object
+    properties:
+      station:
+        $ref: '#/definitions/Station'
+      status:
+        $ref: '#/definitions/StationStatus'
+  StationStatus:
+    type: object
+    properties:
+      date:
+        type: string
+        example: '2017-09-19'
+      healthy:
+        type: integer
+      toconfirm:
+        type: integer
+      tofix:
+        type: integer
