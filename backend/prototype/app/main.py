@@ -3,7 +3,7 @@ from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
-from typing import Union, List
+from typing import Union, List, NamedTuple, Optional
 from temperature import TempTransformer
 import numpy as np
 import cv2
@@ -19,6 +19,12 @@ CORS(app)
 # exif = None
 image_root_path = None
 mongo_client = None
+
+GPS = NamedTuple("GPS", [("lat", float), ("lng", float)])
+
+Station = NamedTuple("Station", [("stationId", str), ("stationName", str), ("description", str), ("gps", GPS)])
+
+StationStatus = NamedTuple("StationStatus", [("date", str), ("healthy", int), ("toconfirm", int), ("tofix", int)])
 
 
 def get_mongo_client() -> MongoClient:
@@ -80,6 +86,20 @@ def get_defect_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("defect")
 
 
+def get_station_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("station")
+
+
+def _get_station(station_id: str) -> Station:
+    station_coll = get_station_collection()
+    post = station_coll.find_one({"stationId": station_id}, {"_id": 0})
+    station = Station(stationId=post.get("stationId"),
+                      stationName=post.get("stationName"),
+                      description=post.get("description"),
+                      gps=GPS(post.get("gps")[0], post.get("gps")[1]))
+    return station
+
+
 @app.route("/api/v1/station", methods=["GET"])
 def get_station_list():
     """
@@ -128,14 +148,77 @@ def get_station_by_id(station):
     else:
         return jsonify(result)
 
+# API for station status
+
+
+def _get_station_status(station: str, date: Optional[str] = None) -> Optional[StationStatus]:
+    """
+    return station status of a given date, default to the latest status
+    :param station: station id
+    :param date: date, default to be the latest
+    :return: station status
+    """
+    defect_coll = get_defect_collection()
+
+    if date is None:
+        dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+        dates.sort()
+
+        if len(dates) == 0:
+            return
+
+        date = dates[-1]
+
+    n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
+    n_to_fix = defect_coll.find({"station": station, "date": date, "category": -1}).count()
+    n_to_confirm = defect_coll.find({"station": station, "date": date, "category": 0}).count()
+
+    return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, tofix=n_to_fix)
+
+
+@app.route("/api/v1/station/status", methods=["GET"])
+def get_station_status():
+    """
+    :return: status of all available stations
+    """
+    # posts = get_mongo_client().solar.station.find({}, {"_id": False})
+    # results = [x for x in posts]
+    # for x in results:
+    #     x.update({"status": _get_station_status(x.get("stationId"))._asdict()})
+    #
+    station_ids = get_station_collection().find({}, {"stationId": 1, "_id": 0}).distinct("stationId")
+
+    results = list()
+
+    for station_id in station_ids:
+        results.append({"station": _get_station(station_id)._asdict(),
+                        "status": _get_station_status(station_id)._asdict()})
+
+    return jsonify(results)
+
+
+@app.route("/api/v1/station/{station}/status/date/{date}", methods=["GET"])
+def get_status_by_station_and_date(station: str, date: str):
+    status = _get_station_status(station, date)
+    return jsonify(status._asdict())
+
+
+@app.route("api/v1/station/{station}/status/start/{start}/end{end}")
+def get_status_by_station_and_range(station: str, start: str, end: str):
+    defect_coll = get_defect_collection()
+    dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+    dates = [x for x in dates if start <= x <= end]
+    results = [_get_station_status(station, date)._asdict() for date in dates]
+    return jsonify(results)
+
 
 @app.route("/api/v1/station/<string:station>/date", methods=["GET"])
 def get_reports_by_date_station(station: str):
     """
     return the dates of available reports for a station
     """
-    collection = get_mongo_client().get_database("solar").get_collection("defect")
-    posts = collection.find({"station": station}, {"date": True}).distinct(key="date")
+    coll = get_mongo_client().get_database("solar").get_collection("defect")
+    posts = coll.find({"station": station}, {"date": True}).distinct(key="date")
     return jsonify(posts)
 
 
