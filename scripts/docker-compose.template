@@ -1,12 +1,12 @@
 version: '2'
 services:
-    db:
+    {$BRAND}_db:
         image: mongo:latest
         volumes:
             - {$DB_ROOT}/data:/data/db
             - {$DB_ROOT}/conf:/data/configdb
         
-    backend:
+    {$BRAND}_api:
         image: solarapi:latest
         volumes:
             - {$DATA_ROOT}:/usr/src/app/data
@@ -15,15 +15,13 @@ services:
             - GSD_IR={$GSD_IR}
             - MONGO_HOST=mongo
         links:
-            - db:mongo
-        ports:
-            - "5000:5000"
-    frontend:
-        image: solarui:latest
+            - {$BRAND}_db:mongo
+    {$BRAND}_ui:
+        image: solarui:{$BRAND}
         volumes:
             - {$TILES}:/usr/share/nginx/html/spi/{$BRAND}/assets/tiles
         ports:
-            - "{$PORT}:80"
+            - "80"
         links:
-            - backend:solarapi
+            - {$BRAND}_api:solarapi
 
