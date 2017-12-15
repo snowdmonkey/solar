@@ -5,6 +5,12 @@ from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
 from typing import Union, List, NamedTuple, Optional
 from temperature import TempTransformer
+
+try:
+    from .models import *
+except Exception:
+    from models import *
+
 import numpy as np
 import cv2
 import io
@@ -15,16 +21,14 @@ import pymongo
 app = Flask(__name__)
 CORS(app)
 
-# defects_summary = None
-# exif = None
 image_root_path = None
 mongo_client = None
-
-GPS = NamedTuple("GPS", [("lat", float), ("lng", float)])
-
-Station = NamedTuple("Station", [("stationId", str), ("stationName", str), ("description", str), ("gps", GPS)])
-
-StationStatus = NamedTuple("StationStatus", [("date", str), ("healthy", int), ("toconfirm", int), ("tofix", int)])
+#
+# GPS = NamedTuple("GPS", [("lat", float), ("lng", float)])
+#
+# Station = NamedTuple("Station", [("stationId", str), ("stationName", str), ("description", str), ("gps", GPS)])
+#
+# StationStatus = NamedTuple("StationStatus", [("date", str), ("healthy", int), ("toconfirm", int), ("tofix", int)])
 
 
 def get_mongo_client() -> MongoClient:
@@ -90,13 +94,18 @@ def get_station_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("station")
 
 
-def _get_station(station_id: str) -> Station:
+def _get_station(station_id: str) -> Optional[Station]:
     station_coll = get_station_collection()
     post = station_coll.find_one({"stationId": station_id}, {"_id": 0})
+
+    if post is None:
+        return
+
     station = Station(stationId=post.get("stationId"),
                       stationName=post.get("stationName"),
                       description=post.get("description"),
-                      gps=GPS(post.get("gps")[0], post.get("gps")[1]))
+                      gps=tuple(post.get("gps")))
+                      # gps=(post.get("gps")[0], post.get("gps")[1]))
     return station
 
 
@@ -115,7 +124,7 @@ def add_station():
     """
     add a station
     """
-    collection = get_mongo_client().get_database("solar").get_collection("station")
+    station_coll = get_mongo_client().get_database("solar").get_collection("station")
     post_body = request.get_json()
     station_id = post_body.get("stationId")
     station_name = post_body.get("stationName")
@@ -128,7 +137,7 @@ def add_station():
     elif station_gps is None:
         abort(400, "need gps")
     else:
-        collection.insert_one({
+        station_coll.insert_one({
             "stationId": station_id,
             "stationName": station_name,
             "description": station_description,
@@ -176,39 +185,59 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
     return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, tofix=n_to_fix)
 
 
-@app.route("/api/v1/station/status", methods=["GET"])
+@app.route("/api/v1/status", methods=["GET"])
 def get_station_status():
     """
     :return: status of all available stations
     """
-    # posts = get_mongo_client().solar.station.find({}, {"_id": False})
-    # results = [x for x in posts]
-    # for x in results:
-    #     x.update({"status": _get_station_status(x.get("stationId"))._asdict()})
-    #
     station_ids = get_station_collection().find({}, {"stationId": 1, "_id": 0}).distinct("stationId")
 
     results = list()
 
     for station_id in station_ids:
-        results.append({"station": _get_station(station_id)._asdict(),
-                        "status": _get_station_status(station_id)._asdict()})
+        station = _get_station(station_id)
+        status = _get_station_status(station_id)
+
+        if (station is not None) and (status is not None):
+            results.append({"station": station._asdict(),
+                            "status": status._asdict()})
 
     return jsonify(results)
 
 
-@app.route("/api/v1/station/{station}/status/date/{date}", methods=["GET"])
+@app.route("/api/v1/station/<string:station>/date/<string:date>/status", methods=["GET"])
 def get_status_by_station_and_date(station: str, date: str):
     status = _get_station_status(station, date)
+    if status is None:
+        abort(404)
     return jsonify(status._asdict())
 
 
-@app.route("api/v1/station/{station}/status/start/{start}/end{end}")
+@app.route("/api/v1/station/<string:station>/status/start/<string:start>/end/<string:end>", methods=["GET"])
 def get_status_by_station_and_range(station: str, start: str, end: str):
     defect_coll = get_defect_collection()
     dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x <= end]
-    results = [_get_station_status(station, date)._asdict() for date in dates]
+    results = list()
+    for date in dates:
+        status = _get_station_status(station, date)
+        if status is not None:
+            results.append(status._asdict())
+
+    return jsonify(results)
+
+
+@app.route("/api/v1/station/<string:station>/status/start/<string:start>", methods=["GET"])
+def get_status_by_station_and_start(station: str, start: str):
+    defect_coll = get_defect_collection()
+    dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+    dates = [x for x in dates if start <= x ]
+    results = list()
+    for date in dates:
+        status = _get_station_status(station, date)
+        if status is not None:
+            results.append(status._asdict())
+
     return jsonify(results)
 
 
@@ -258,27 +287,12 @@ def get_defects_by_date_and_station(station: str, date: str):
             "latitude": post.get("lat"),
             "longitude": post.get("lng"),
             "category": post.get("category"),
-            "groupId": post.get("group"),
+            "groupId": post.get("panelGroupId"),
             "severity": post.get("severity")
         }
         results.append(defect)
 
     return jsonify(results)
-    # if defect_summary is None:
-    #     abort(404)
-    # else:
-    #     defects = list()
-    #     for d in defect_summary:
-    #         defect = {
-    #             "defectId": d.get("defectId"),
-    #             "latitude": d.get("lat"),
-    #             "longitude": d.get("lng"),
-    #             "category": d.get("category"),
-    #             "groupId": d.get("group"),
-    #             "severity": d.get("severity")
-    #         }
-    #         defects.append(defect)
-    #     return jsonify(defects)
 
 
 @app.route("/api/v1/station/<string:station>/date/<string:date>/analysis", methods=["PUT"])

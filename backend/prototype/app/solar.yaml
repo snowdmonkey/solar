@@ -74,7 +74,7 @@ paths:
           description: success
         '404':
           description: station not found
-  /api/v1/station/status:
+  /api/v1/status:
     get:
       tags:
         - station
@@ -91,7 +91,7 @@ paths:
               $ref: '#/definitions/StationInfo'
         '400':
           description: Bad request
-  '/api/v1/station/{stationId}/status/date/{date}':
+  '/api/v1/station/{stationId}/date/{date}/status':
     get:
       tags:
         - station
@@ -270,8 +270,10 @@ paths:
             type: object
             properties:
               ids:
-                type: string
-                example: '1,2'
+                type: array
+                items:
+                  type: str
+                example: ["DEF1", "DEF2"]
               category:
                 $ref: '#/definitions/DefectCategory'
       produces:
