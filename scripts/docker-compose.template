@@ -9,11 +9,9 @@ services:
     backend:
         image: solarapi:latest
         volumes:
-            - {$DATA_ROOT}:{$APP_DATA}
+            - {$DATA_ROOT}:/usr/src/app/data
         environment:
-            - IMG_ROOT={$APP_DATA}
-            - BG_PATH={$APP_DATA}/{$PANORAMA}
-            - GSD_PANORAMA={$GSD_PANORAMA}
+            - IMG_ROOT=/usr/src/app/data
             - GSD_IR={$GSD_IR}
             - MONGO_HOST=mongo
         links:
@@ -23,18 +21,9 @@ services:
     frontend:
         image: solarui:latest
         volumes:
-            - {$DATA_ROOT}:{$UI_DATA}
-        environment:
-            - UI_MAP={$UI_DATA}/{$UI_MAP}
-            - IMAGE_PATH={$IMAGE_PATH}
-            - GPS_CENTER={$GPS_CENTER}
-            - GPS_TOP={$GPS_TOP}
-            - GPS_BOTTOM={$GPS_BOTTOM}
-            - HOST={$HOST}
-            - PORT={$PORT}
+            - {$TILES}:/usr/share/nginx/html/spi/{$BRAND}/assets/tiles
         ports:
             - "{$PORT}:80"
         links:
-            - db:mongo
             - backend:solarapi
 
