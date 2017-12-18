@@ -3,8 +3,6 @@ from os import sep, remove
 from os.path import isdir, isfile
 import sys
 
-from get_map_coordinates import get_tif_coordinates
-
 
 class TenantInfo(object):
     def __init__(self, section: str):
@@ -41,42 +39,24 @@ def check_info(info: TenantInfo):
     if not isdir(sep.join((info.DB_ROOT, 'data'))) or not isdir(sep.join((info.DB_ROOT, 'conf'))):
         print('Invalid DB_ROOT.')
         ret = False
-    elif not isdir(info.DATA_ROOT):
+    if not isdir(info.DATA_ROOT):
         print('Invalid DATA_ROOT')
         ret = False
-    elif not isfile(sep.join((info.DATA_ROOT, info.PANORAMA))):
-        print('Invalid PANORAMA')
+    if not isdir(info.TILES):
+        print('Invalid TILES')
         ret = False
-    elif not isfile(sep.join((info.DATA_ROOT, info.UI_MAP))):
-        print('Invalid UI_MAP')
-        ret = False
-    else:
-        try:
-            float(info.GSD_PANORAMA)
-        except ValueError:
-            print('Invalid GSD_PANORAMA')
-            ret = False
-        try:
-            float(info.GSD_IR)
-        except ValueError:
-            print('Invalid GSD_IR')
-            ret = False
+	try:
+		float(info.GSD_IR)
+	except ValueError:
+		print('Invalid GSD_IR')
+		ret = False
     return ret
-
-
-def update_gps_info(info: TenantInfo):
-    center, top, bottom = get_tif_coordinates(sep.join((info.DATA_ROOT, info.PANORAMA)))
-    info.setattr('GPS_CENTER', center)
-    info.setattr('GPS_TOP', top)
-    info.setattr('GPS_BOTTOM', bottom)
 
 
 def build_compose_file(template, info):
     path = 'conf/docker-compose.yml'
     if isfile(path):
         remove(path)
-
-    update_gps_info(info)
 
     with open('conf/docker-compose.yml', 'w') as ofile:
         for line in template:

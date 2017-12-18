@@ -6,6 +6,7 @@ COPY prototype/ /usr/src/app
 
 ENV PYTHONPATH /usr/src/app
 
-RUN mkdir -p /usr/src/app/data
+RUN mkdir -p /usr/src/app/data \
+    && mkdir -p /usr/src/app/sqlite
 
 CMD [ "python", "app/main.py" ]
