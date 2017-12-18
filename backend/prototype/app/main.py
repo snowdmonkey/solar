@@ -174,7 +174,6 @@ def _get_station(station_id: str) -> Optional[Station]:
                       stationName=post.get("stationName"),
                       description=post.get("description"),
                       gps=tuple(post.get("gps")))
-                      # gps=(post.get("gps")[0], post.get("gps")[1]))
     return station
 
 
@@ -387,7 +386,7 @@ def get_defects_by_date_and_station(station: str, date: str):
             "longitude": post.get("lng"),
             "category": post.get("category"),
             "groupId": post.get("panelGroupId"),
-            "severity": post.get("severity")
+            "severity": round(post.get("severity"), 2)
         }
         results.append(defect)
 
@@ -444,7 +443,8 @@ def set_defects(station: str, date: str):
     return "OK"
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+@app.route(API_BASE +
+           "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
 def get_ir_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string which contains the details of the images relating to a defect
@@ -613,7 +613,8 @@ def set_panel_group(station: str, group_id: str):
     return "OK"
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
+@app.route(API_BASE +
+           "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
     :return: temperature in celsius degree at a provided point
@@ -644,7 +645,8 @@ def get_point_temperature(station: str, date: str, image: str):
     return jsonify(result)
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
+@app.route(API_BASE +
+           "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """
     :return: the temperature profile in an rectangle area of the image
