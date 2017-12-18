@@ -27,7 +27,7 @@ import pymongo
 
 UPLOAD_FOLDER = '/usr/src/app/data'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
-API_BASE = os.environ.get("BRAND", '')
+API_BASE = os.environ.get("BRAND", '') + '/api/v1'
 app = Flask(__name__)
 CORS(app)
 
@@ -176,7 +176,27 @@ def _get_station(station_id: str) -> Optional[Station]:
     return station
 
 
-@app.route(API_BASE + "/api/v1/station", methods=["GET"])
+@app.route(API_BASE + "/login", methods=['POST'])
+@auth.login_required
+def login():
+    token = g.user.generate_auth_token(600)
+    return jsonify({'token': token.decode('ascii'), 'duration': 600})
+
+
+@app.route(API_BASE + "/refresh_token", methods=['POST'])
+@auth.login_required
+def get_auth_token():
+    token = g.user.generate_auth_token(600)
+    return jsonify({'token': token.decode('ascii'), 'duration': 600})
+
+
+@app.route(API_BASE + "/resource", methods=['GET'])
+@auth.login_required
+def get_resource():
+    return jsonify({'data': 'Hello, %s!' % g.user.username})
+
+
+@app.route(API_BASE + "/station", methods=["GET"])
 def get_station_list():
     """
     :return: a list of stations
@@ -186,7 +206,7 @@ def get_station_list():
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station", methods=["POST"])
+@app.route(API_BASE + "/station", methods=["POST"])
 def add_station():
     """
     add a station
@@ -213,7 +233,7 @@ def add_station():
         return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>", methods=["GET"])
 def get_station_by_id(station):
     """
     return the profile of a station
@@ -252,7 +272,7 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
     return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, tofix=n_to_fix)
 
 
-@app.route(API_BASE + "/api/v1/status", methods=["GET"])
+@app.route(API_BASE + "/status", methods=["GET"])
 def get_station_status():
     """
     :return: status of all available stations
@@ -272,7 +292,7 @@ def get_station_status():
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/status", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/status", methods=["GET"])
 def get_status_by_station_and_date(station: str, date: str):
     status = _get_station_status(station, date)
     if status is None:
@@ -280,7 +300,7 @@ def get_status_by_station_and_date(station: str, date: str):
     return jsonify(status._asdict())
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/status/start/<string:start>/end/<string:end>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/status/start/<string:start>/end/<string:end>", methods=["GET"])
 def get_status_by_station_and_range(station: str, start: str, end: str):
     defect_coll = get_defect_collection()
     dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
@@ -294,7 +314,7 @@ def get_status_by_station_and_range(station: str, start: str, end: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/status/start/<string:start>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/status/start/<string:start>", methods=["GET"])
 def get_status_by_station_and_start(station: str, start: str):
     defect_coll = get_defect_collection()
     dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
@@ -308,7 +328,7 @@ def get_status_by_station_and_start(station: str, start: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date", methods=["GET"])
 def get_reports_by_date_station(station: str):
     """
     return the dates of available reports for a station
@@ -318,7 +338,7 @@ def get_reports_by_date_station(station: str):
     return jsonify(posts)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/defects", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defects", methods=["GET"])
 def get_defects_by_date_and_station(station: str, date: str):
     """
     return a defect list by station and date
@@ -362,7 +382,7 @@ def get_defects_by_date_and_station(station: str, date: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/analysis", methods=["PUT"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["PUT"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
     pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
@@ -370,7 +390,7 @@ def analyze_by_date_and_station(station: str, date: str):
     return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
 def set_defect_by_id(station: str, date: str, defect_id: str):
     """
     set a defect's gps coordinates and category
@@ -396,7 +416,7 @@ def set_defect_by_id(station: str, date: str, defect_id: str):
     return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/defects", methods=["PUT"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defects", methods=["PUT"])
 def set_defects(station: str, date: str):
     """
     set defects' category by batch
@@ -412,7 +432,7 @@ def set_defects(station: str, date: str):
     return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
 def get_ir_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string which contains the details of the images relating to a defect
@@ -435,14 +455,14 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
         exif = get_exif(station=station, date=date, image=image_name)
         lat = exif.get("GPSLatitude")
         lng = exif.get("GPSLongitude")
-        image_url = API_BASE + "/api/v1/station/{}/date/{}/image/ir/{}?defect={}".format(station, date, image_name, defect_id)
+        image_url = API_BASE + "/station/{}/date/{}/image/ir/{}?defect={}".format(station, date, image_name, defect_id)
         if color_map is not None:
             image_url += "&colorMap={}".format(color_map)
         results.append({"imageName": image_name, "latitude": lat, "longitude": lng, "url": image_url})
     return jsonify(results)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
 def get_visual_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string that contains the details of visual images relating to a defect
@@ -451,7 +471,7 @@ def get_visual_images_by_defect(station: str, date: str, defect_id: str):
     pass
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])
 def get_labeled_image(station: str, date: str, image: str):
     """
     generate and return an image with image name and defect id, the corresponding defects should be labeled on the image
@@ -502,7 +522,7 @@ def get_labeled_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="labeled.png", mimetype="image/png")
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/image/visual/<string:image>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/visual/<string:image>", methods=["GET"])
 def get_visual_image(station: str, date: str, image: str):
     """
     :return: raw visual image specified by image name
@@ -514,7 +534,7 @@ def get_visual_image(station: str, date: str, image: str):
     return send_file(io.BytesIO(img_bytes), attachment_filename="visual.png", mimetype="image/png")
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/panel_group", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/panel_group", methods=["GET"])
 def get_panel_groups(station):
     """
     get all the panel groups positions
@@ -528,7 +548,7 @@ def get_panel_groups(station):
     return jsonify(result)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/panel_group", methods=["POST"])
+@app.route(API_BASE + "/station/<string:station>/panel_group", methods=["POST"])
 def add_panel_group(station: str):
     """
     add a new panel group
@@ -544,7 +564,7 @@ def add_panel_group(station: str):
     return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/panel_group/<string:group_id>", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/panel_group/<string:group_id>", methods=["GET"])
 def get_panel_group(station: str, group_id: str):
     """
     get the details of a panel group
@@ -554,7 +574,7 @@ def get_panel_group(station: str, group_id: str):
     return jsonify(result)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/panel_group/<string:group_id>", methods=["PUT"])
+@app.route(API_BASE + "/station/<string:station>/panel_group/<string:group_id>", methods=["PUT"])
 def set_panel_group(station: str, group_id: str):
     """
     set the name and/or the corners of a panel group
@@ -581,7 +601,7 @@ def set_panel_group(station: str, group_id: str):
     return "OK"
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
     :return: temperature in celsius degree at a provided point
@@ -612,7 +632,7 @@ def get_point_temperature(station: str, date: str, image: str):
     return jsonify(result)
 
 
-@app.route(API_BASE + "/api/v1/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """
     :return: the temperature profile in an rectangle area of the image
