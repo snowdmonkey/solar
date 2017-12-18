@@ -53,10 +53,18 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     if outfile_path is None:
         outfile_path = join(folder_path, "exif.json")
 
-    cmd = ['exiftool', "-j", "-b", "-c", "%+.10f", join(folder_path, "*.jpg")]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-    out = proc.stdout
-    results = json.loads(out.decode("utf-8"))
+    file_names = [x for x in os.listdir(folder_path) if x.endswith(".jpg")]
+
+    results = list()
+    for file_name in file_names:
+
+
+        logger.info("start to extract exif from {}".format(file_name))
+        cmd = ['exiftool', "-j", "-b", "-c", "%+.10f", join(folder_path, file_name)]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        out = proc.stdout
+        result = json.loads(out.decode("utf-8"))
+        results.append(result)
 
     for result in results:
         result["GPSLatitude"] = float(result.get("GPSLatitude"))
