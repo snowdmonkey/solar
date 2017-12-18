@@ -745,7 +745,7 @@ def upload_visual_file(station, date):
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/el", methods=['POST'])
-def upload_visual_file(station, date):
+def upload_el_file(station, date):
     if request.method == 'POST':
         if 'file' not in request.files:
             abort(400)
