@@ -3,7 +3,7 @@ from flask_cors import CORS
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
-from typing import Union, List, NamedTuple, Optional
+from typing import Union, List, Optional
 from temperature import TempTransformer
 
 try:
@@ -11,7 +11,6 @@ try:
 except Exception:
     from models import *
 
-import numpy as np
 import cv2
 import io
 import logging
@@ -23,12 +22,6 @@ CORS(app)
 
 image_root_path = None
 mongo_client = None
-#
-# GPS = NamedTuple("GPS", [("lat", float), ("lng", float)])
-#
-# Station = NamedTuple("Station", [("stationId", str), ("stationName", str), ("description", str), ("gps", GPS)])
-#
-# StationStatus = NamedTuple("StationStatus", [("date", str), ("healthy", int), ("toconfirm", int), ("tofix", int)])
 
 
 def get_mongo_client() -> MongoClient:
