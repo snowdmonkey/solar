@@ -1,3 +1,6 @@
+import torch
+from torch.autograd import Variable
+
 from flask import Flask, request, send_file, abort, jsonify, g
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
