@@ -24,6 +24,7 @@ class ImageProcessPipeline:
         """
         self.logger = logging.getLogger("ImageProcessPipeline")
         self._image_folder = image_folder
+        # self._image_folder = join(image_folder, station, date)
         self._mongo_client = self._get_mongo_client()
         self._date = date
         self._station = station
@@ -40,7 +41,7 @@ class ImageProcessPipeline:
 
     def _process_exif(self):
 
-        self.logger.info("starts to create_profile exif")
+        self.logger.info("starts to process exif in {}".format(join(self._image_folder, "ir")))
 
         exif_list = batch_process_exif(folder_path=join(self._image_folder, "ir"))
         if self._mongo_client is not None:

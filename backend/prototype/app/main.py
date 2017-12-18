@@ -40,9 +40,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # extensions
 
-# if not os.path.exists("./sqlite/"):
-#     os.mkdir("./sqlite")
-
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
