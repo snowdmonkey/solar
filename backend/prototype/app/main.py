@@ -393,7 +393,7 @@ def get_defects_by_date_and_station(station: str, date: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["PUT"])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["POST"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
     pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
