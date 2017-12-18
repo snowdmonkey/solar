@@ -297,7 +297,7 @@ def myMain():
     for k, v in result_group.items():
         cv2.rectangle(img, (v[0][0], v[0][1]), (v[2][0], v[2][1]), (0, 0, 0), 2)
 
-    cv2.imwrite("labeled.png", img)
+    cv2.imwrite("mylabeled.png", img)
 
 
 if __name__ == "__main__":
