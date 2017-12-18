@@ -36,6 +36,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # extensions
+
+# if not os.path.exists("./sqlite/"):
+#     os.mkdir("./sqlite")
+
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
@@ -262,9 +266,19 @@ def get_station_status():
         station = _get_station(station_id)
         status = _get_station_status(station_id)
 
-        if (station is not None) and (status is not None):
-            results.append({"station": station._asdict(),
-                            "status": status._asdict()})
+        if station is not None:
+            result = {"station": station._asdict()}
+
+            if status is None:
+                result.update({"status": dict()})
+            else:
+                result.update({"status": status._asdict()})
+
+            results.append(result)
+
+        # if (station is not None) and (status is not None):
+        #     results.append({"station": station._asdict(),
+        #                     "status": status._asdict()})
 
     return jsonify(results)
 
