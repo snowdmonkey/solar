@@ -738,7 +738,7 @@ def check_dir(station, date, image_type):
         os.mkdir(image_dir)
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/ir", methods=['GET', 'POST'])
+@app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/ir", methods=['POST'])
 def upload_ir_file(station, date):
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -754,9 +754,9 @@ def upload_ir_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'ir', filename))
                 return 'success', 200
             else:
-                abort(400, jsonify(dict(message='文件格式错误。')))
+                return jsonify(dict(message='文件格式错误。')), 400
         else:
-            abort(400, jsonify(dict(message='未知文件。')))
+            return jsonify(dict(message='未知文件。')), 400
     abort(400)
 
 
@@ -776,9 +776,9 @@ def upload_visual_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
                 return 'success', 200
             else:
-                abort(400, '文件格式错误。')
+                return jsonify(dict(message='文件格式错误。')), 400
         else:
-            abort(400, '未知文件。')
+            return jsonify(dict(message='未知文件。')), 400
     abort(400)
 
 
@@ -798,9 +798,9 @@ def upload_el_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'el', filename))
                 return 'success', 200
             else:
-                abort(400, '文件格式错误。')
+                return jsonify(dict(message='文件格式错误。')), 400
         else:
-            abort(400, '未知文件。')
+            return jsonify(dict(message='未知文件。')), 400
     abort(400)
 
 
