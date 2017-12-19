@@ -160,6 +160,10 @@ def get_defect_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("defect")
 
 
+def get_exif_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("exif")
+
+
 def get_station_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("station")
 
@@ -257,9 +261,10 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
     :return: station status
     """
     defect_coll = get_defect_collection()
+    exif_coll = get_exif_collection()
 
     if date is None:
-        dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+        dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
         dates.sort()
 
         if len(dates) == 0:
@@ -314,8 +319,9 @@ def get_status_by_station_and_date(station: str, date: str):
 
 @app.route(API_BASE + "/station/<string:station>/status/start/<string:start>/end/<string:end>", methods=["GET"])
 def get_status_by_station_and_range(station: str, start: str, end: str):
-    defect_coll = get_defect_collection()
-    dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+    # defect_coll = get_defect_collection()
+    exif_coll = get_exif_collection()
+    dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x <= end]
     results = list()
     for date in dates:
@@ -329,7 +335,8 @@ def get_status_by_station_and_range(station: str, start: str, end: str):
 @app.route(API_BASE + "/station/<string:station>/status/start/<string:start>", methods=["GET"])
 def get_status_by_station_and_start(station: str, start: str):
     defect_coll = get_defect_collection()
-    dates = defect_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
+    exif_coll = get_exif_collection()
+    dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x ]
     results = list()
     for date in dates:
@@ -345,7 +352,7 @@ def get_reports_by_date_station(station: str):
     """
     return the dates of available reports for a station
     """
-    coll = get_mongo_client().get_database("solar").get_collection("defect")
+    coll = get_mongo_client().get_database("solar").get_collection("exif")
     posts = coll.find({"station": station}, {"date": True}).distinct(key="date")
     return jsonify(posts)
 
