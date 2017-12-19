@@ -166,7 +166,7 @@ class TifGeoMapper(GeoMapper):
 
     def pixel2gps(self, row: int, col: int) -> Tuple[float, float]:
 
-        longitude, latitude = self._projector(*self.pixel2utm(row, col), inverse=True)
+        longitude, latitude = self._projector(*(self.pixel2utm(row, col)[:2]), inverse=True)
         return latitude, longitude
 
     def gps2pixel(self, latitude: float, longitude: float) -> Tuple[int, int]:

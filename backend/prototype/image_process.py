@@ -81,7 +81,8 @@ class ImageProcessPipeline:
         if self._mongo_client is not None:
             collection = self._mongo_client.get_database("solar").get_collection("rect")
             collection.delete_many({"station": self._station, "date": self._date})
-            collection.insert_many(results)
+            if len(results) != 0:
+                collection.insert_many(results)
         self.logger.info("defects profiling ends")
 
     def _process_aggregate(self):
