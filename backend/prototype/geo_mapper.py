@@ -50,6 +50,14 @@ class GeoMapper(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def gsd(self) -> float:
+        """
+        :return: ground sampling distance of the mapper, in meters
+        """
+        pass
+
 # class AnchorGeoMapper(GeoMapper):
 #
 #     def __init__(self, pixel_anchors, gps_anchors):
@@ -167,6 +175,10 @@ class TifGeoMapper(GeoMapper):
         row, col = self.utm2pixel(x, y, self._utm_zone)
         return row, col
 
+    @property
+    def gsd(self) -> float:
+        return self._x_pixel_scale
+
 
 class UTMGeoMapper(GeoMapper):
 
@@ -238,6 +250,10 @@ class UTMGeoMapper(GeoMapper):
         x, y = self._projector(longitude, latitude)
         row, col = self.utm2pixel(x, y, self._utm_zone)
         return row, col
+
+    @property
+    def gsd(self) -> float:
+        return self._gsd
 
 
 def main():

@@ -723,27 +723,18 @@ def upload_ir_file(station, date):
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/visual", methods=['POST'])
 def upload_visual_file(station, date):
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            abort(400)
-        file = request.files['file']
-        if file.filename == '':
-            abort(400)
-        if file and allowed_file(file.filename):
-            filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
-                1].lower()
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
-            return 'success', 200
+    # if request.method == 'POST':
+    if 'file' not in request.files:
         abort(400)
-    return '''
-        <!doctype html>
-        <title>Upload new File</title>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data action=''>
-          <p><input type=file name=file[] multiple=''>
-             <input type=submit value=Upload>
-        </form>
-        '''
+    file = request.files['file']
+    if file.filename == '':
+        abort(400)
+    if file and allowed_file(file.filename):
+        filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
+            1].lower()
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
+        return 'success', 200
+    abort(400)
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/el", methods=['POST'])
