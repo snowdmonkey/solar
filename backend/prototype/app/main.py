@@ -754,7 +754,7 @@ def upload_ir_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'ir', filename))
                 return 'success', 200
             else:
-                return jsonify(dict(message='文件格式错误。')), 400
+                return jsonify(dict(message='请选择JPG或JEPG格式的文件。')), 400
         else:
             return jsonify(dict(message='未知文件。')), 400
     abort(400)
@@ -776,7 +776,7 @@ def upload_visual_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
                 return 'success', 200
             else:
-                return jsonify(dict(message='文件格式错误。')), 400
+                return jsonify(dict(message='请选择JPG或JEPG格式的文件。')), 400
         else:
             return jsonify(dict(message='未知文件。')), 400
     abort(400)
@@ -798,7 +798,7 @@ def upload_el_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'el', filename))
                 return 'success', 200
             else:
-                return jsonify(dict(message='文件格式错误。')), 400
+                return jsonify(dict(message='请选择JPG或JEPG格式的文件。')), 400
         else:
             return jsonify(dict(message='未知文件。')), 400
     abort(400)
