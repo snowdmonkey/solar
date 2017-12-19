@@ -754,9 +754,9 @@ def upload_ir_file(station, date):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'ir', filename))
                 return 'success', 200
             else:
-                abort(400, '文件格式错误。')
+                abort(400, jsonify(dict(message='文件格式错误。')))
         else:
-            abort(400, '未知文件。')
+            abort(400, jsonify(dict(message='未知文件。')))
     abort(400)
 
 
