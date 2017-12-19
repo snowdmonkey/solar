@@ -10,6 +10,7 @@ from passlib.apps import custom_app_context as pwd_context
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
+import shutil
 from typing import Union, List, Optional
 from temperature import TempTransformer
 from itsdangerous import (TimedJSONWebSignatureSerializer
@@ -696,6 +697,25 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def reset_dir(station, date, image_type):
+    image_dir = os.path.join(app.config['UPLOAD_FOLDER'], station, date, image_type)
+    date_dir = os.path.join(app.config['UPLOAD_FOLDER'], station, date)
+    if os.path.exists(image_dir):
+        shutil.rmtree(image_dir, ignore_errors=True)
+    if not os.path.exists(date_dir):
+        os.mkdir(date_dir)
+    os.mkdir(image_dir)
+
+
+def check_dir(station, date, image_type):
+    image_dir = os.path.join(app.config['UPLOAD_FOLDER'], station, date, image_type)
+    date_dir = os.path.join(app.config['UPLOAD_FOLDER'], station, date)
+    if not os.path.exists(date_dir):
+        os.mkdir(date_dir)
+    if not os.path.exists(image_dir):
+        os.mkdir(image_dir)
+
+
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/ir", methods=['GET', 'POST'])
 def upload_ir_file(station, date):
     if request.method == 'POST':
@@ -707,18 +727,11 @@ def upload_ir_file(station, date):
         if file and allowed_file(file.filename):
             filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
                 1].lower()
+            check_dir()
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'ir', filename))
             return 'success', 200
         abort(400)
-    return '''
-        <!doctype html>
-        <title>Upload new File</title>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data action=''>
-          <p><input type=file name=file[] multiple=''>
-             <input type=submit value=Upload>
-        </form>
-        '''
+    abort(400)
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/image/visual", methods=['POST'])
@@ -732,6 +745,7 @@ def upload_visual_file(station, date):
     if file and allowed_file(file.filename):
         filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
             1].lower()
+        check_dir()
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
         return 'success', 200
     abort(400)
@@ -748,18 +762,11 @@ def upload_el_file(station, date):
         if file and allowed_file(file.filename):
             filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
                 1].lower()
+            check_dir()
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'el', filename))
             return 'success', 200
         abort(400)
-    return '''
-        <!doctype html>
-        <title>Upload new File</title>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data action=''>
-          <p><input type=file name=file[] multiple=''>
-             <input type=submit value=Upload>
-        </form>
-        '''
+    abort(400)
 
 
 if __name__ == "__main__":
