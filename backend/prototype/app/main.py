@@ -275,11 +275,12 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
 
         date = dates[-1]
 
-    n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
-    n_to_fix = defect_coll.find({"station": station, "date": date, "category": -1}).count()
     n_to_confirm = defect_coll.find({"station": station, "date": date, "category": 0}).count()
+    n_confirmed = defect_coll.find({"station": station, "date": date, "category": 1}).count()
+    n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
+    n_in_fix = defect_coll.find({"station": station, "date": date, "category": 3}).count()
 
-    return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, tofix=n_to_fix)
+    return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, infix=n_in_fix, confirmed=n_confirmed)
 
 
 @app.route(API_BASE + "/status", methods=["GET"])

@@ -11,5 +11,6 @@ Station = NamedTuple("Station", [("stationId", str),
 StationStatus = NamedTuple("StationStatus", [("date", str),
                                              ("healthy", int),
                                              ("toconfirm", int),
-                                             ("tofix", int)])
+                                             ("infix", int),
+                                             ("confirmed", int)])
 
