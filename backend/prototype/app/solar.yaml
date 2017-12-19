@@ -282,7 +282,7 @@ paths:
         '200':
           description: success
   '/api/v1/station/{stationId}/date/{date}/analysis':
-    put:
+    post:
       tags:
         - defects
       summary: image analysis trigger
