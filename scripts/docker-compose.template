@@ -1,28 +1,29 @@
 version: '2'
 services:
-    {$BRAND}_db:
+    db:
         image: mongo:latest
         volumes:
             - {$DB_ROOT}/data:/data/db
             - {$DB_ROOT}/conf:/data/configdb
         
-    {$BRAND}_api:
+    api:
         image: solarapi:latest
         volumes:
             - {$DATA_ROOT}:/usr/src/app/data
+            - {$SQLITE_ROOT}:/usr/src/app/app/sqlite
         environment:
             - IMG_ROOT=/usr/src/app/data
             - GSD_IR={$GSD_IR}
             - MONGO_HOST=mongo
-			- BRAND={$BRAND}
+            - BRAND=/spi/{$BRAND}
         links:
-            - {$BRAND}_db:mongo
-    {$BRAND}_ui:
+            - db:mongo
+    ui:
         image: solarui:{$BRAND}
         volumes:
             - {$TILES}:/usr/share/nginx/html/spi/{$BRAND}/assets/tiles
         ports:
             - "80"
         links:
-            - {$BRAND}_api:solarapi
+            - api:solarapi
 
