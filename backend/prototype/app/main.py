@@ -727,7 +727,7 @@ def upload_ir_file(station, date):
         if file and allowed_file(file.filename):
             filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
                 1].lower()
-            check_dir()
+            check_dir(station, date, 'ir')
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'ir', filename))
             return 'success', 200
         abort(400)
@@ -745,7 +745,7 @@ def upload_visual_file(station, date):
     if file and allowed_file(file.filename):
         filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
             1].lower()
-        check_dir()
+        check_dir(station, date, 'visual')
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'visual', filename))
         return 'success', 200
     abort(400)
@@ -762,7 +762,7 @@ def upload_el_file(station, date):
         if file and allowed_file(file.filename):
             filename = datetime.now().isoformat()[11:].replace(':', '-') + '.' + file.filename.rsplit('.', 1)[
                 1].lower()
-            check_dir()
+            check_dir(station, date, 'el')
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], station, date, 'el', filename))
             return 'success', 200
         abort(400)
