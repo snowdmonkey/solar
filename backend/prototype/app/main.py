@@ -27,13 +27,14 @@ import io
 import logging
 import os
 import pymongo
+import uuid
 
 UPLOAD_FOLDER = '/usr/src/app/data'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
 API_BASE = os.environ.get("BRAND", '') + '/api/v1'
 app = Flask(__name__)
 CORS(app)
-
+# logger = logging.getLogger(__name__)
 
 app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sqlite/db.sqlite'
@@ -324,6 +325,7 @@ def get_status_by_station_and_range(station: str, start: str, end: str):
     exif_coll = get_exif_collection()
     dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x <= end]
+    dates.sort()
     results = list()
     for date in dates:
         status = _get_station_status(station, date)
@@ -335,10 +337,11 @@ def get_status_by_station_and_range(station: str, start: str, end: str):
 
 @app.route(API_BASE + "/station/<string:station>/status/start/<string:start>", methods=["GET"])
 def get_status_by_station_and_start(station: str, start: str):
-    defect_coll = get_defect_collection()
+    # defect_coll = get_defect_collection()
     exif_coll = get_exif_collection()
     dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
-    dates = [x for x in dates if start <= x ]
+    dates = [x for x in dates if start <= x]
+    dates.sort()
     results = list()
     for date in dates:
         status = _get_station_status(station, date)
@@ -407,6 +410,11 @@ def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
 
     def target_func(folder_path: str, station: str, date: str):
+
+        # logger = logging.getLogger()
+        # log_id = str(uuid.uuid4())
+        # logger.addHandler(logging.FileHandler(log_id))
+
         pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
         pipeline.run()
 
@@ -785,6 +793,7 @@ def upload_el_file(station, date):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         handlers=[logging.FileHandler("log"), logging.StreamHandler()])
+
     if not os.path.exists('sqlite/db.sqlite'):
         db.create_all()
         add_user()
