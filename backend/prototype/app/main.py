@@ -15,6 +15,7 @@ from typing import Union, List, Optional
 from temperature import TempTransformer
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
+from threading import Thread
 
 try:
     from .models import *
@@ -404,8 +405,13 @@ def get_defects_by_date_and_station(station: str, date: str):
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["POST"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
-    pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
-    pipeline.run()
+
+    def target_func(folder_path: str, station: str, date: str):
+        pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
+        pipeline.run()
+
+    t = Thread(target=target_func, args=(folder_path, station, date))
+    t.start()
     return "OK"
 
 
