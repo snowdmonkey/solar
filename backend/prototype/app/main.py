@@ -30,6 +30,7 @@ import logging
 import os
 import pymongo
 import uuid
+import json
 
 UPLOAD_FOLDER = '/usr/src/app/data'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
@@ -258,6 +259,33 @@ def get_station_by_id(station):
 # API for station status
 
 
+def _get_n_panel_group(station_id: str) -> int:
+    """
+    get the number of panel groups in a station
+    :param station_id: station id
+    :return: number of panel groups in a station
+    """
+    panel_group_coll = get_panel_group_collection()
+    n_panel_group = panel_group_coll.find({"station": station_id}).count()
+
+    if n_panel_group == 0:
+        file_path = os.path.join(get_image_root(), station_id, "groupPanel.json")
+
+        if os.path.isfile(file_path):
+            with open(file_path, "r") as f:
+                panel_groups = json.load(f)
+
+            for d in panel_groups:
+                d.update({"station": station_id})
+
+            panel_group_coll.insert_many(panel_groups)
+            return len(panel_groups)
+        else:
+            return 0
+    else:
+        return n_panel_group
+
+
 def _get_station_status(station: str, date: Optional[str] = None) -> Optional[StationStatus]:
     """
     return station status of a given date, default to the latest status
@@ -282,7 +310,25 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
     n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
     n_in_fix = defect_coll.find({"station": station, "date": date, "category": 3}).count()
 
-    return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, infix=n_in_fix, confirmed=n_confirmed)
+    n_panel_groups = _get_n_panel_group(station)
+
+    if n_panel_groups == 0:
+        overall_status = "unknown"
+    else:
+        problem_ratio = (n_to_confirm+n_confirmed+n_in_fix) / n_panel_groups
+        if problem_ratio > 0.5:
+            overall_status = "red"
+        elif problem_ratio > 0.05:
+            overall_status = "yellow"
+        else:
+            overall_status = "green"
+
+    return StationStatus(date=date,
+                         healthy=n_healthy,
+                         toconfirm=n_to_confirm,
+                         infix=n_in_fix,
+                         confirmed=n_confirmed,
+                         overallStatus=overall_status)
 
 
 @app.route(API_BASE + "/status", methods=["GET"])
@@ -361,8 +407,9 @@ def get_reports_by_date_station(station: str):
     return the dates of available reports for a station
     """
     coll = get_mongo_client().get_database("solar").get_collection("exif")
-    posts = coll.find({"station": station}, {"date": True}).distinct(key="date")
-    return jsonify(posts)
+    dates = coll.find({"station": station}, {"date": True}).distinct(key="date")
+    dates.sort()
+    return jsonify(dates)
 
 
 def severity2grade(severity: float) -> int:
@@ -865,7 +912,6 @@ def upload_el_file(station, date):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         handlers=[logging.FileHandler("log"), logging.StreamHandler()])
-
     if not os.path.exists('sqlite/db.sqlite'):
         db.create_all()
         add_user()
