@@ -11,6 +11,7 @@ from passlib.apps import custom_app_context as pwd_context
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
+import pymongo.database
 import shutil
 from typing import Union, List, Optional
 from temperature import TempTransformer
@@ -132,10 +133,7 @@ def get_defects_summary(station: str, date: str) -> Union[None, List[dict]]:
 def get_exif(station: str, date: str, image: str) -> Union[dict, None]:
 
     exif = get_mongo_client().solar.exif.find_one({"station": station, "date": date, "image": image}, {"_id": 0})
-    # if value is None:
-    #     exif = None
-    # else:
-    #     exif = value.get("value")
+
     return exif
 
 
@@ -169,6 +167,10 @@ def get_exif_collection() -> collection:
 
 def get_station_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("station")
+
+
+def get_log_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("log")
 
 
 def _get_station(station_id: str) -> Optional[Station]:
@@ -363,6 +365,20 @@ def get_reports_by_date_station(station: str):
     return jsonify(posts)
 
 
+def severity2grade(severity: float) -> int:
+    """
+    scale severity to integers between 1 to 10
+    :param severity: severity, a float greater than 4
+    :return: severity grade, an integer between 1 to 10
+    """
+    grade = int(severity - 3)
+
+    if grade > 10:
+        grade = 10
+
+    return grade
+
+
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/defects", methods=["GET"])
 def get_defects_by_date_and_station(station: str, date: str):
     """
@@ -400,29 +416,69 @@ def get_defects_by_date_and_station(station: str, date: str):
             "longitude": post.get("lng"),
             "category": post.get("category"),
             "groupId": post.get("panelGroupId"),
-            "severity": round(post.get("severity"), 2)
+            "severity": severity2grade(post.get("severity"))
         }
         results.append(defect)
 
     return jsonify(results)
 
 
+class MongoHandler(logging.Handler):
+
+    def __init__(self, job_id: str, coll: collection):
+
+        super().__init__()
+        self._job_id = job_id
+        self._coll = coll
+
+    def emit(self, record):
+
+        d = {
+            'timestamp': datetime.utcnow(),
+            'level': record.levelname,
+            # 'thread': record.thread,
+            # 'threadName': record.threadName,
+            'message': record.getMessage(),
+            'loggerName': record.name,
+            # 'fileName': record.pathname,
+            'module': record.module,
+            'method': record.funcName,
+            'lineNumber': record.lineno,
+            'jobId': self._job_id
+        }
+
+        self._coll.insert_one(d)
+
+
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["POST"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
+    log_id = str(uuid.uuid4())
 
     def target_func(folder_path: str, station: str, date: str):
 
-        # logger = logging.getLogger()
-        # log_id = str(uuid.uuid4())
-        # logger.addHandler(logging.FileHandler(log_id))
+        logger = logging.getLogger()
 
-        pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
-        pipeline.run()
+        logger.addHandler(logging.FileHandler(log_id))
+        logger.addHandler(MongoHandler(job_id=log_id,
+                                       coll=get_mongo_client().get_database("solar").get_collection("log")))
+
+        coll_log = get_log_collection()
+
+        coll_log.insert_one({"jobId": log_id, "status": "running", "timestamp": datetime.utcnow()})
+
+        try:
+            pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
+            pipeline.run()
+            coll_log.insert_one({"jobId": log_id, "status": "completed", "timestamp": datetime.utcnow()})
+        except Exception as e:
+            logger.exception("message")
+            coll_log.insert_one({"jobId": log_id, "status": "failed", "timestamp": datetime.utcnow()})
 
     t = Thread(target=target_func, args=(folder_path, station, date))
     t.start()
-    return "OK"
+
+    return jsonify({"jobId": log_id})
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
@@ -498,7 +554,8 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+@app.route(API_BASE +
+           "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
 def get_visual_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string that contains the details of visual images relating to a defect
