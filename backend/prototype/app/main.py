@@ -456,6 +456,7 @@ def get_defects_by_date_and_station(station: str, date: str):
             abort(400, "unknown sort key")
 
     results = list()
+    index = 0
     for post in defects:
         defect = {
             "defectId": post.get("defectId"),
@@ -463,9 +464,11 @@ def get_defects_by_date_and_station(station: str, date: str):
             "longitude": post.get("lng"),
             "category": post.get("category"),
             "groupId": post.get("panelGroupId"),
-            "severity": severity2grade(post.get("severity"))
+            "severity": severity2grade(post.get("severity")),
+            "index": index
         }
         results.append(defect)
+        index += 1
 
     return jsonify(results)
 
