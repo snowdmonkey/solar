@@ -11,6 +11,7 @@ from passlib.apps import custom_app_context as pwd_context
 from os.path import join
 from image_process import ImageProcessPipeline
 from pymongo import MongoClient, collection
+import pymongo.database
 import shutil
 from typing import Union, List, Optional
 from temperature import TempTransformer
@@ -29,6 +30,7 @@ import logging
 import os
 import pymongo
 import uuid
+import json
 
 UPLOAD_FOLDER = '/usr/src/app/data'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
@@ -132,10 +134,7 @@ def get_defects_summary(station: str, date: str) -> Union[None, List[dict]]:
 def get_exif(station: str, date: str, image: str) -> Union[dict, None]:
 
     exif = get_mongo_client().solar.exif.find_one({"station": station, "date": date, "image": image}, {"_id": 0})
-    # if value is None:
-    #     exif = None
-    # else:
-    #     exif = value.get("value")
+
     return exif
 
 
@@ -169,6 +168,10 @@ def get_exif_collection() -> collection:
 
 def get_station_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("station")
+
+
+def get_log_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("log")
 
 
 def _get_station(station_id: str) -> Optional[Station]:
@@ -262,6 +265,33 @@ def get_station_by_id(station):
 # API for station status
 
 
+def _get_n_panel_group(station_id: str) -> int:
+    """
+    get the number of panel groups in a station
+    :param station_id: station id
+    :return: number of panel groups in a station
+    """
+    panel_group_coll = get_panel_group_collection()
+    n_panel_group = panel_group_coll.find({"station": station_id}).count()
+
+    if n_panel_group == 0:
+        file_path = os.path.join(get_image_root(), station_id, "groupPanel.json")
+
+        if os.path.isfile(file_path):
+            with open(file_path, "r") as f:
+                panel_groups = json.load(f)
+
+            for d in panel_groups:
+                d.update({"station": station_id})
+
+            panel_group_coll.insert_many(panel_groups)
+            return len(panel_groups)
+        else:
+            return 0
+    else:
+        return n_panel_group
+
+
 def _get_station_status(station: str, date: Optional[str] = None) -> Optional[StationStatus]:
     """
     return station status of a given date, default to the latest status
@@ -281,11 +311,30 @@ def _get_station_status(station: str, date: Optional[str] = None) -> Optional[St
 
         date = dates[-1]
 
-    n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
-    n_to_fix = defect_coll.find({"station": station, "date": date, "category": -1}).count()
     n_to_confirm = defect_coll.find({"station": station, "date": date, "category": 0}).count()
+    n_confirmed = defect_coll.find({"station": station, "date": date, "category": 1}).count()
+    n_healthy = defect_coll.find({"station": station, "date": date, "category": 2}).count()
+    n_in_fix = defect_coll.find({"station": station, "date": date, "category": 3}).count()
 
-    return StationStatus(date=date, healthy=n_healthy, toconfirm=n_to_confirm, tofix=n_to_fix)
+    n_panel_groups = _get_n_panel_group(station)
+
+    if n_panel_groups == 0:
+        overall_status = "unknown"
+    else:
+        problem_ratio = (n_to_confirm+n_confirmed+n_in_fix) / n_panel_groups
+        if problem_ratio > 0.5:
+            overall_status = "red"
+        elif problem_ratio > 0.05:
+            overall_status = "yellow"
+        else:
+            overall_status = "green"
+
+    return StationStatus(date=date,
+                         healthy=n_healthy,
+                         toconfirm=n_to_confirm,
+                         infix=n_in_fix,
+                         confirmed=n_confirmed,
+                         overallStatus=overall_status)
 
 
 @app.route(API_BASE + "/status", methods=["GET"])
@@ -364,8 +413,23 @@ def get_reports_by_date_station(station: str):
     return the dates of available reports for a station
     """
     coll = get_mongo_client().get_database("solar").get_collection("exif")
-    posts = coll.find({"station": station}, {"date": True}).distinct(key="date")
-    return jsonify(posts)
+    dates = coll.find({"station": station}, {"date": True}).distinct(key="date")
+    dates.sort()
+    return jsonify(dates)
+
+
+def severity2grade(severity: float) -> int:
+    """
+    scale severity to integers between 1 to 10
+    :param severity: severity, a float greater than 4
+    :return: severity grade, an integer between 1 to 10
+    """
+    grade = int(severity - 3)
+
+    if grade > 10:
+        grade = 10
+
+    return grade
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/defects", methods=["GET"])
@@ -398,6 +462,7 @@ def get_defects_by_date_and_station(station: str, date: str):
             abort(400, "unknown sort key")
 
     results = list()
+    index = 0
     for post in defects:
         defect = {
             "defectId": post.get("defectId"),
@@ -405,29 +470,71 @@ def get_defects_by_date_and_station(station: str, date: str):
             "longitude": post.get("lng"),
             "category": post.get("category"),
             "groupId": post.get("panelGroupId"),
-            "severity": round(post.get("severity"), 2)
+            "severity": severity2grade(post.get("severity")),
+            "index": index
         }
         results.append(defect)
+        index += 1
 
     return jsonify(results)
+
+
+class MongoHandler(logging.Handler):
+
+    def __init__(self, job_id: str, coll: collection):
+
+        super().__init__()
+        self._job_id = job_id
+        self._coll = coll
+
+    def emit(self, record):
+
+        d = {
+            'timestamp': datetime.utcnow(),
+            'level': record.levelname,
+            # 'thread': record.thread,
+            # 'threadName': record.threadName,
+            'message': record.getMessage(),
+            'loggerName': record.name,
+            # 'fileName': record.pathname,
+            'module': record.module,
+            'method': record.funcName,
+            'lineNumber': record.lineno,
+            'jobId': self._job_id
+        }
+
+        self._coll.insert_one(d)
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/analysis", methods=["POST"])
 def analyze_by_date_and_station(station: str, date: str):
     folder_path = join(get_image_root(), station, date)
+    log_id = str(uuid.uuid4())
 
     def target_func(folder_path: str, station: str, date: str):
 
-        # logger = logging.getLogger()
-        # log_id = str(uuid.uuid4())
-        # logger.addHandler(logging.FileHandler(log_id))
+        logger = logging.getLogger()
 
-        pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
-        pipeline.run()
+        logger.addHandler(logging.FileHandler(log_id))
+        logger.addHandler(MongoHandler(job_id=log_id,
+                                       coll=get_mongo_client().get_database("solar").get_collection("log")))
+
+        coll_log = get_log_collection()
+
+        coll_log.insert_one({"jobId": log_id, "status": "running", "timestamp": datetime.utcnow()})
+
+        try:
+            pipeline = ImageProcessPipeline(image_folder=folder_path, station=station, date=date)
+            pipeline.run()
+            coll_log.insert_one({"jobId": log_id, "status": "completed", "timestamp": datetime.utcnow()})
+        except Exception as e:
+            logger.exception("message")
+            coll_log.insert_one({"jobId": log_id, "status": "failed", "timestamp": datetime.utcnow()})
 
     t = Thread(target=target_func, args=(folder_path, station, date))
     t.start()
-    return "OK"
+
+    return jsonify({"jobId": log_id})
 
 
 @app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>", methods=["PUT"])
@@ -503,7 +610,8 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
     return jsonify(results)
 
 
-@app.route(API_BASE + "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+@app.route(API_BASE +
+           "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
 def get_visual_images_by_defect(station: str, date: str, defect_id: str):
     """
     return a json string that contains the details of visual images relating to a defect
@@ -813,7 +921,6 @@ def upload_el_file(station, date):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         handlers=[logging.FileHandler("log"), logging.StreamHandler()])
-
     if not os.path.exists('sqlite/db.sqlite'):
         db.create_all()
         add_user()
