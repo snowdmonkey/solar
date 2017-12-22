@@ -71,6 +71,13 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
         feature = feature.float()
         label = label.long()
 
+        if torch.cuda.is_available():
+            feature = Variable(feature.cuda())
+            label = Variable(label.cuda())
+        else:
+            feature = Variable(feature)
+            label = Variable(label)
+
         output = net(feature)
         pred = output.data.max(1)[1]
         incorrect = pred.ne(label.data).sum()
