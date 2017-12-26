@@ -143,6 +143,7 @@ def get_acc(output: torch.LongTensor, label: torch.LongTensor) -> float:
 def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
 
     acc_list = list()
+    iou_list = list()
 
     pred_folder = "./data/pre"
 
@@ -151,9 +152,9 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
 
     for i, data in enumerate(data_loader):
 
-        feature, label, file_name = data
-        feature = feature.float()
-        label = label.long()
+        feature, label = data
+        # feature = feature.float()
+        # label = label.long()
 
         if torch.cuda.is_available():
             feature = Variable(feature.cuda())
@@ -164,27 +165,35 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
 
         output = net(feature)
         pred = output.data.max(1)[1]
-        correct = pred.eq(label.data).sum()
-        acc = correct/torch.numel(feature.data)
+
+        iou = get_iou(pred, label.data, 1)
+        acc = get_acc(pred, label.data)
+
+        # correct = pred.eq(label.data).sum()
+        # acc = correct/torch.numel(feature.data)
         acc_list.append(acc)
+        iou_list.append(iou)
 
-        bs, c, h, w = output.size()
-        _, indices = output.data.max(1)
-        indices = indices.view(bs, h, w)
-        output = indices.cpu().numpy()[0]
-        th = np.uint8(output * 255)
+        # bs, c, h, w = output.size()
+        # _, indices = output.data.max(1)
+        # indices = indices.view(bs, h, w)
+        # output = indices.cpu().numpy()[0]
+        # th = np.uint8(output * 255)
+        #
+        # cv2.imwrite(os.path.join(pred_folder, file_name[0]), th)
 
-        cv2.imwrite(os.path.join(pred_folder, file_name[0]), th)
-
-    logging.info("test accuracy is {}".format(list_mean(acc_list)))
+    logging.info("test accuracy is {}, test iou is {}".format(list_mean(acc_list), list_mean(iou_list)))
 
 
 def main():
-    train_dataset = FCNDataset("./data/feature", "./data/label")
-    test_dataset = FCNDataset("./data/feature_test", "./data/label_test")
+    # train_dataset = FCNDataset("./data/feature", "./data/label")
+    # test_dataset = FCNDataset("./data/feature_test", "./data/label_test")
+
+    train_dataset = BigImageDataset("./data/linuo.tif", "./data/label.png", 400, 500)
+    test_dataset = BigImageDataset("./data/linuo.tif", "./data/label.png", 500, 100)
 
     # data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=4)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
     net = fc_dense_net57(n_classes=2, channels=3)
@@ -204,9 +213,10 @@ def main():
 
         for i, data in enumerate(train_loader):
 
-            feature, label, _ = data
-            feature = feature.float()
-            label = label.long()
+            # feature, label, _ = data
+            # feature = feature.float()
+            # label = label.long()
+            feature, label = data
 
             if torch.cuda.is_available():
                 feature = Variable(feature.cuda())
@@ -226,10 +236,12 @@ def main():
 
             running_loss += loss.data[0]
 
-            if i % 100 == 0:
+            # if i % 100 == 0:
+            #
+            #     logging.info("epoch: {}; batch: {}; running loss: {}".format(epoch, i, running_loss/100))
+            #     running_loss = 0.0
 
-                logging.info("epoch: {}; batch: {}; running loss: {}".format(epoch, i, running_loss/100))
-                running_loss = 0.0
+        logging.info("epoch: {}; running loss: {}".format(epoch, running_loss / len(train_dataset)))
 
         net.eval()
 
