@@ -156,6 +156,10 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
         # feature = feature.float()
         # label = label.long()
 
+        raw = feature.data.cpu().numpy()[0]
+
+        cv2.imwrite(os.path.join(pred_folder, "raw{}.png".format(i)), raw)
+
         if torch.cuda.is_available():
             feature = Variable(feature.cuda())
             label = Variable(label.cuda())
@@ -174,13 +178,13 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
         acc_list.append(acc)
         iou_list.append(iou)
 
-        # bs, c, h, w = output.size()
-        # _, indices = output.data.max(1)
-        # indices = indices.view(bs, h, w)
-        # output = indices.cpu().numpy()[0]
-        # th = np.uint8(output * 255)
-        #
-        # cv2.imwrite(os.path.join(pred_folder, file_name[0]), th)
+        bs, c, h, w = output.size()
+        _, indices = output.data.max(1)
+        indices = indices.view(bs, h, w)
+        output = indices.cpu().numpy()[0]
+        th = np.uint8(output * 255)
+
+        cv2.imwrite(os.path.join(pred_folder, "pred{}.png".format(i)), th)
 
     logging.info("test accuracy is {}, test iou is {}".format(list_mean(acc_list), list_mean(iou_list)))
 

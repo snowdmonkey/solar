@@ -195,7 +195,7 @@ def login():
     return jsonify({'token': token.decode('ascii'), 'duration': 600})
 
 
-@app.route(API_BASE + "/logout", method=['POST'])
+@app.route(API_BASE + "/logout", methods=['POST'])
 @auth.login_required
 def logout():
     return 'Bye!', 200
