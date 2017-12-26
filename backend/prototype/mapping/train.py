@@ -5,6 +5,7 @@ import os
 import logging
 import cv2
 import numpy as np
+import random
 from typing import Tuple, List
 
 from torch.autograd import Variable
@@ -51,9 +52,92 @@ class FCNDataset(torch.utils.data.Dataset):
         return feature, label
 
 
+class BigImageDataset(torch.utils.data.Dataset):
+    """
+    this data would use a very large image as feature and another very large image as the label. Each time it randomly
+    crop a piece
+    """
+
+    def __init__(self, feature_image: str, label_image: str, crop_size: int, dataset_size: int):
+        """
+        constructor
+        :param feature_image: image path of the big image
+        :param label_image: image path of the label image
+        :param crop_size: the size of the cropped sample
+        :param dataset_size: totally how many samples to return
+        """
+        self._feature_image = cv2.imread(feature_image, cv2.IMREAD_COLOR)
+        self._label_image = cv2.imread(label_image, cv2.IMREAD_GRAYSCALE)
+
+        self._height, self._width = self._label_image.shape
+
+        self._crop_size = crop_size
+        self._dataset_size = dataset_size
+
+    def __len__(self):
+        return self._dataset_size
+
+    def _get_random_block(self) -> Tuple[np.ndarray, np.ndarray]:
+        left = random.randint(0, self._width-self._crop_size)
+        top = random.randint(0, self._height-self._crop_size)
+        right = left + self._crop_size
+        btm = top + self._crop_size
+
+        feature = self._feature_image[top:btm, left:right]
+        label = self._label_image[top:btm, left:right]
+
+        return feature, label
+
+    def __getitem__(self, idx: int) -> Tuple[np.ndarray, np.ndarray]:
+
+        while True:
+            feature, label = self._get_random_block()
+            n_zero = (feature[:, :, 0] == 0).sum()
+            zero_ratio = n_zero/label.size
+
+            if zero_ratio < 0.5:
+                break
+
+        feature = np.rollaxis(feature, 2)
+        label = label / 255
+
+        feature = torch.from_numpy(feature).float()
+        label = torch.from_numpy(label).long()
+        return feature, label
+
+
 def list_mean(l: List[float]):
 
     return sum(l)/len(l)
+
+
+def get_iou(output: torch.LongTensor, label: torch.LongTensor, index: int) -> float:
+    """
+    compute the IoU over an index
+    :param output: predicted tensor
+    :param label: label tensor
+    :param index: index of interest
+    :return: IoU
+    """
+    i_area = ((output == index) & (label == index)).sum()
+    u_area = ((output == index) | (label == index)).sum()
+
+    if u_area > 0:
+        return i_area/u_area
+    else:
+        return 1.0
+
+
+def get_acc(output: torch.LongTensor, label: torch.LongTensor) -> float:
+    """
+    compute the accuracy of the prediction
+    :param output: prediction tensor
+    :param label: label tensor
+    :return: accuracy
+    """
+    n_acc = output.eq(label).sum()
+    acc_rate = n_acc / output.numel()
+    return acc_rate
 
 
 def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
