@@ -35,7 +35,7 @@ class FCNDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self._files)
 
-    def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
+    def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray, str]:
 
         file_name = self._files[idx]
 
@@ -49,7 +49,7 @@ class FCNDataset(torch.utils.data.Dataset):
         # label[1, label_img == 0] = 1
         label = label_img/255
 
-        return feature, label
+        return feature, label, file_name
 
 
 class BigImageDataset(torch.utils.data.Dataset):
@@ -151,7 +151,7 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
 
     for i, data in enumerate(data_loader):
 
-        feature, label = data
+        feature, label, file_name = data
         feature = feature.float()
         label = label.long()
 
@@ -164,17 +164,17 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
 
         output = net(feature)
         pred = output.data.max(1)[1]
-        incorrect = pred.ne(label.data).sum()
-        acc = 1 - incorrect/len(feature)
+        correct = pred.eq(label.data).sum()
+        acc = correct/torch.numel(feature.data)
         acc_list.append(acc)
 
         bs, c, h, w = output.size()
         _, indices = output.data.max(1)
         indices = indices.view(bs, h, w)
-        output = indices.numpy()[0]
+        output = indices.cpu().numpy()[0]
         th = np.uint8(output * 255)
 
-        cv2.imwrite(os.path.join(pred_folder, "{}.png".format(i)), th)
+        cv2.imwrite(os.path.join(pred_folder, file_name[0]), th)
 
     logging.info("test accuracy is {}".format(list_mean(acc_list)))
 
@@ -184,7 +184,7 @@ def main():
     test_dataset = FCNDataset("./data/feature_test", "./data/label_test")
 
     # data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=4)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
     net = fc_dense_net57(n_classes=2, channels=3)
@@ -199,12 +199,12 @@ def main():
     criterion = torch.nn.NLLLoss2d()
     optimizer = torch.optim.RMSprop(net.parameters())
 
-    for epoch in range(2):
-        # running_loss = 0.0
+    for epoch in range(20):
+        running_loss = 0.0
 
         for i, data in enumerate(train_loader):
 
-            feature, label = data
+            feature, label, _ = data
             feature = feature.float()
             label = label.long()
 
@@ -224,7 +224,12 @@ def main():
             loss.backward()
             optimizer.step()
 
-            logging.info("epoch: {}; batch: {}; loss: {}".format(epoch, i, loss.data[0]))
+            running_loss += loss.data[0]
+
+            if i % 100 == 0:
+
+                logging.info("epoch: {}; batch: {}; running loss: {}".format(epoch, i, running_loss/100))
+                running_loss = 0.0
 
         net.eval()
 
