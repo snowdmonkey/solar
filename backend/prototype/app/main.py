@@ -198,6 +198,7 @@ def login():
 @app.route(API_BASE + "/logout", methods=['POST'])
 @auth.login_required
 def logout():
+    # todo: log the user id and its logout time
     return 'Bye!', 200
 
 
