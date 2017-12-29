@@ -18,6 +18,34 @@ class PanelGroupLabeler(ABC):
         """
         pass
 
+
+class PanelGroupLabelResult:
+    """
+    this class serves as the results for panel group labeler
+    """
+
+    def __init__(self, groups: Dict[str, List[Tuple[int, int]]], width: int, height: int):
+        """
+        constructor
+        :param groups: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col),
+        (conner3_row, corner3_col), (conner4_row, corner4_col),...]
+        :param width: width of the original panorama in pixels
+        :param height: height of the original panorama in pixels
+        """
+        self._groups = groups
+
+    def to_svg(self, path: str = "panelGroups.svg"):
+        """
+        transfer the panel groups location into a svg file, so it can be loaded into Gimp for manual adjustment
+        :return: None
+        """
+
+
+
+
+
+
+
 class SolarPanelReco(PanelGroupLabeler):
 
     img_path = ''
@@ -210,10 +238,10 @@ class SolarPanelReco(PanelGroupLabeler):
     
     @staticmethod
     def _verify(list):
-        '''
+        """
         for verify the solar panel which was not recognised correctly
         this function is not must
-        '''
+        """
         temp_del = [[1420,4509], [4845,803], [5650,1526], [4327,2144], [4929,2139], [4255,4666], [4464,4868], [2577,5134], [1785,5029], [2293,5388], [1918,5480], [1721,5478], [2376,7210], [1906,8235], [3417,5890], [3857,5054], [4968,4301]]
         temp_add = []
         for item in temp_del:
@@ -222,7 +250,6 @@ class SolarPanelReco(PanelGroupLabeler):
             except ValueError:
                 continue
         return list
-
 
 
 class ColorBasedLabeler(PanelGroupLabeler):

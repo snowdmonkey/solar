@@ -6,6 +6,7 @@ import logging
 import cv2
 import numpy as np
 import random
+import argparse
 from typing import Tuple, List
 
 from torch.autograd import Variable
@@ -98,7 +99,7 @@ class BigImageDataset(torch.utils.data.Dataset):
             if zero_ratio < 0.5:
                 break
 
-        feature = np.rollaxis(feature, 2)
+        feature = np.rollaxis(feature, 2)/255
         label = label / 255
 
         feature = torch.from_numpy(feature).float()
@@ -156,7 +157,11 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
         # feature = feature.float()
         # label = label.long()
 
-        raw = feature.data.cpu().numpy()[0]
+        # raw = (feature.cpu().numpy()*255).astype(np.uint8)[0]
+        raw = feature.cpu().numpy()*255
+        raw = raw.round().astype(np.uint8)[0]
+        raw = np.rollaxis(raw, 0, 3)
+        # print(raw.shape)
 
         cv2.imwrite(os.path.join(pred_folder, "raw{}.png".format(i)), raw)
 
@@ -189,15 +194,12 @@ def eval_model(net: torch.nn.Module, data_loader: torch.utils.data.DataLoader):
     logging.info("test accuracy is {}, test iou is {}".format(list_mean(acc_list), list_mean(iou_list)))
 
 
-def main():
-    # train_dataset = FCNDataset("./data/feature", "./data/label")
-    # test_dataset = FCNDataset("./data/feature_test", "./data/label_test")
+def train(feature_image: str, label_image: str, n_epoch: int):
 
-    train_dataset = BigImageDataset("./data/linuo.tif", "./data/label.png", 400, 500)
-    test_dataset = BigImageDataset("./data/linuo.tif", "./data/label.png", 500, 100)
+    train_dataset = BigImageDataset(feature_image, label_image, 400, 500)
+    test_dataset = BigImageDataset(feature_image, label_image, 500, 100)
 
-    # data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=4)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
     net = fc_dense_net57(n_classes=2, channels=3)
@@ -210,16 +212,14 @@ def main():
         net.cuda()
 
     criterion = torch.nn.NLLLoss2d()
-    optimizer = torch.optim.RMSprop(net.parameters())
+    # optimizer = torch.optim.RMSprop(net.parameters())
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.01)
 
-    for epoch in range(20):
+    for epoch in range(n_epoch):
         running_loss = 0.0
 
         for i, data in enumerate(train_loader):
 
-            # feature, label, _ = data
-            # feature = feature.float()
-            # label = label.long()
             feature, label = data
 
             if torch.cuda.is_available():
@@ -256,9 +256,20 @@ def main():
         torch.save(net, "model.pt")
 
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("feature_image", type=str, help="path of the feature image")
+    parser.add_argument("label_image", type=str, help="path of the label image")
+    parser.add_argument("--epoch", type=int, help="number of epochs to run", default=50)
+
+    args = parser.parse_args()
+    # print(args)
+    train(args.feature_image, args.label_image, n_epoch=args.epoch)
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        handlers=[logging.StreamHandler()])
+                        handlers=[logging.StreamHandler(), logging.FileHandler("log")])
     main()
 
 
