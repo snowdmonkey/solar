@@ -45,11 +45,11 @@ def check_info(info: TenantInfo):
     if not isdir(info.TILES):
         print('Invalid TILES')
         ret = False
-	try:
-		float(info.GSD_IR)
-	except ValueError:
-		print('Invalid GSD_IR')
-		ret = False
+    try:
+        float(info.GSD_IR)
+    except ValueError:
+        print('Invalid GSD_IR')
+        ret = False
     return ret
 
 
