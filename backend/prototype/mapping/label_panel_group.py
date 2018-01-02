@@ -1,22 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, List
 from scipy.cluster.hierarchy import linkage, cut_tree
+from xml.dom import minidom
+from geo_mapper import GeoMapper, TifGeoMapper
 import numpy as np
 import cv2
-import sys
-
-
-class PanelGroupLabeler(ABC):
-
-    @abstractmethod
-    def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
-        """
-        create_profile a given image
-        :param img_path:
-        :return: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col), (conner3_row, corner3_col),
-         (conner4_row, corner4_col),...]
-        """
-        pass
+import argparse
+import os
+import json
 
 
 class PanelGroupLabelResult:
@@ -28,22 +19,138 @@ class PanelGroupLabelResult:
         """
         constructor
         :param groups: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col),
-        (conner3_row, corner3_col), (conner4_row, corner4_col),...]
+        (conner3_row, corner3_col), (conner4_row, corner4_col),...]. The order of the vertices should be clockwise or
+        counter clockwise
         :param width: width of the original panorama in pixels
         :param height: height of the original panorama in pixels
         """
         self._groups = groups
+        self._width = width
+        self._height = height
 
-    def to_svg(self, path: str = "panelGroups.svg"):
+    @property
+    def groups(self) -> Dict[str, List[Tuple[int, int]]]:
+        return self._groups
+
+    def dump_svg(self, path: str = "panelGroups.svg"):
         """
         transfer the panel groups location into a svg file, so it can be loaded into Gimp for manual adjustment
         :return: None
         """
+        with open(path, "w") as f:
+            f.write('<svg width="' + str(self._width) + '" height="' + str(self._height) +
+                    '" xmlns="http://www.w3.org/2000/svg">')
+            f.write("\n")
+            for poly in self._groups.values():
+                f.write("<polygon points=\"")
+                for row, col in poly:
+                    f.write("{},{} ".format(col, row))
+                f.write("\"/>\n")
+            f.write("</svg>")
+
+    def dump_json(self, mapper: GeoMapper, path: str = "groupPanel.json"):
+        """
+        dump the label results to a json file that will eventually be used at backend
+        :param path: path to the json to dump the label results
+        :param mapper: geo mapper that can map the pixel location to gps coordinates
+        :return: None
+        """
+        groups = self._groups
+        results = list()
+        for group_id, vertices in groups.items():
+            vertices_gps = [mapper.pixel2gps(row=x[0], col=x[1]) for x in vertices]
+            d = {"vertices": vertices_gps, "groupId": group_id}
+            results.append(d)
+
+        results.sort(key=lambda x: x.get("groupId"))
+
+        with open(path, "w") as f:
+            json.dump(results, f)
 
 
+class PanelGroupLabeler(ABC):
 
+    @staticmethod
+    def _code_groups(group_list: List[List[Tuple[int, int]]]) -> Dict[str, List[Tuple[int, int]]]:
+        """
+        give each group an Id
+        """
+        d = dict()
+        for i, group in enumerate(group_list):
+            d.update({"G{:05}".format(i): group})
+        return d
 
+    @abstractmethod
+    def _process_image(self, img_path: str) -> List[List[Tuple[int, int]]]:
+        """
+        create_profile a given image
+        :param img_path:
+        :return: list of groups, groups = [group], group = [(conner1_row, corner1_col), (conner2_row, corner2_col),
+        (conner3_row, corner3_col), (conner4_row, corner4_col),...]. The vertices should be sorted clockwise or
+        counter clockwise
+        """
+        pass
 
+    def label(self, img_path: str) -> PanelGroupLabelResult:
+        group_list = self._process_image(img_path)
+        coded_groups = self._code_groups(group_list)
+        img = cv2.imread(img_path)
+        height, width, _ = img.shape
+        return PanelGroupLabelResult(groups=coded_groups, width=width, height=height)
+
+    @staticmethod
+    def _str2coordinates(s: str) -> Tuple[int, int]:
+        words = s.split(",")
+        words = [int(float(x)) for x in words]
+        return words[1], words[0]
+
+    def from_svg(self, svg_path: str) -> PanelGroupLabelResult:
+        """
+        generate panel group result from a svg file. The svg file show be an exported path from GIMP
+        :param svg_path: path to the svg file
+        :return: panel group label result
+        """
+        doc = minidom.parse(svg_path)
+        path_string = doc.getElementsByTagName("path")[0].getAttribute("d")  # type: str
+        view_str = doc.getElementsByTagName("svg")[0].getAttribute("viewBox")  # type: str
+
+        doc.unlink()
+
+        words = path_string.split()
+
+        groups = list()
+        group_str = list()
+        collecting = False
+
+        for word in words:
+            if word == "C":
+                group_str = list()
+                collecting = True
+            elif word == "Z":
+                collecting = False
+                group_str = [s for i, s in enumerate(group_str) if i % 3 == 0]
+                group = [self._str2coordinates(x) for x in group_str]
+                groups.append(group)
+            elif collecting is True:
+                group_str.append(word)
+
+            # line = line.strip()
+            # if line.startswith("M"):
+            #     group = list()
+            # if not line.endswith("Z"):
+            #     coordinate_str = line.split(" ")[-1]
+            #     coordinates = [int(float(x)) for x in coordinate_str.split(",")]
+            #     group.append((coordinates[1], coordinates[0]))
+            # else:
+            #     groups.append(group)
+
+        words = [int(x) for x in view_str.split(" ")]
+        width = words[2]
+        height = words[3]
+
+        groups = self._code_groups(groups)
+
+        return PanelGroupLabelResult(groups=groups, width=width, height=height)
 
 
 class SolarPanelReco(PanelGroupLabeler):
@@ -254,23 +361,24 @@ class SolarPanelReco(PanelGroupLabeler):
 
 class ColorBasedLabeler(PanelGroupLabeler):
 
-    def process_image(self, img_path: str) -> Dict[str, List[Tuple[int, int]]]:
+    def _process_image(self, img_path: str) -> List[List[Tuple[int, int]]]:
         """
-        create_profile a given image
-        :param img_path:
-        :return: a dict group_id -> [(conner1_row, corner1_col), (conner2_row, corner2_col), (conner3_row, corner3_col),
-         (conner4_row, corner4_col)]
+        implement abstract method in PanelGroupLabeler
         """
-        results = dict()
+        results = list()
         raw_image = cv2.imread(img_path, cv2.IMREAD_COLOR)
         blue_scale = self._convert_blue_scale(raw_image)
         _, th = cv2.threshold(blue_scale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        kernel = np.ones((5, 5), np.uint8)
+        th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel)
+        th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+
         _, contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = [x for x in contours if cv2.contourArea(x) > 10000]
-        for i in range(len(contours)):
-            cnt = contours[i]
+        contours = [x for x in contours if cv2.contourArea(x) > 5000]
+        for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            results.update({str(i): [(y, x), (y+h, x), (y+h, x+w), (y, x+w)]})
+            results.append([(y, x), (y+h, x), (y+h, x+w), (y, x+w)])
         # points = list()
         # for cnt in contours:
         #     for cnt_point in cnt:
@@ -298,35 +406,55 @@ class ColorBasedLabeler(PanelGroupLabeler):
 
 
 def main():
-    img_path = sys.argv[1]
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(dest="sub_command", help="sub-command help")
+
+    parser_tosvg = subparsers.add_parser("tosvg", help="write panel group profile into a svg file")
+    parser_tosvg.add_argument("image_path", type=str, help="path to panorama image")
+    parser_tosvg.add_argument("--out-dir", type=str, default=".", required=False)
+
+    parser_fromsvg = subparsers.add_parser("fromsvg", help="generate panelGroup.json from a svg file")
+    parser_fromsvg.add_argument("svg_file", type=str, help="path to the svg file")
+    parser_fromsvg.add_argument("tif_file", type=str, help="path to the geo tif file")
+    parser_fromsvg.add_argument("--out-dir", type=str, default=".", required=False)
+
+    args = parser.parse_args()
+
     labeler = ColorBasedLabeler()
-    result = labeler.process_image(img_path)
-    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
-    for k, v in result.items():
-        cv2.rectangle(img, (v[0][1], v[0][0]), (v[2][1], v[2][0]), (0, 255, 0), 2)
+    if args.sub_command == "tosvg":
+        image_path = args.image_path
+        out_dir = args.out_dir
+        # labeler = ColorBasedLabeler()
+        result = labeler.label(image_path)
+        result.dump_svg(os.path.join(out_dir, "panelgroup.svg"))
+    elif args.sub_command == "fromsvg":
+        svg_path = args.svg_file
+        tif_path = args.tif_file
+        out_dir = args.out_dir
+        result = labeler.from_svg(svg_path)
+        result.dump_json(mapper=TifGeoMapper(tif_path), path=os.path.join(out_dir, "groupPanel.json"))
 
-    cv2.imwrite("labeled.png", img)
-    
-    
-def myMain():
-    img_path = sys.argv[1]
-    img_roi = sys.argv[2]
-    img_roi_black = sys.argv[3]
-    #boundary_value = sys.argv[4]
-    labeler = SolarPanelReco(img_path, img_roi, img_roi_black, 4540)
-    result,result1, result_group = labeler.process_image()
-    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
-    for k, v in result.items():
-        cv2.rectangle(img, (v[0][0], v[0][1]), (v[2][0], v[2][1]), (0, 0, 255), 1)
-        
-    for k, v in result_group.items():
-        cv2.rectangle(img, (v[0][0], v[0][1]), (v[2][0], v[2][1]), (0, 0, 0), 2)
-
-    cv2.imwrite("mylabeled.png", img)
+# def myMain():
+#     img_path = sys.argv[1]
+#     img_roi = sys.argv[2]
+#     img_roi_black = sys.argv[3]
+#     #boundary_value = sys.argv[4]
+#     labeler = SolarPanelReco(img_path, img_roi, img_roi_black, 4540)
+#     result,result1, result_group = labeler.process_image()
+#     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+#
+#     for k, v in result.items():
+#         cv2.rectangle(img, (v[0][0], v[0][1]), (v[2][0], v[2][1]), (0, 0, 255), 1)
+#
+#     for k, v in result_group.items():
+#         cv2.rectangle(img, (v[0][0], v[0][1]), (v[2][0], v[2][1]), (0, 0, 0), 2)
+#
+#     cv2.imwrite("mylabeled.png", img)
 
 
 if __name__ == "__main__":
     main()
-    myMain()
+    # myMain()
