@@ -1,4 +1,4 @@
-FROM solarapi:base
+FROM python:latest
 
 MAINTAINER "Jason Jiao <jason.jiao@honeywell.com>"
 
