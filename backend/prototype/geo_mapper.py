@@ -221,6 +221,7 @@ class UTMGeoMapper(GeoMapper):
         take in a pair of utm coordinates and return pixel position
         :param x: easting of the utm coordinates
         :param y: northing of the utm coordinates
+        :param zone_number: utm zone number
         :return: pixel position in form of (row, col)
         """
         row = self._origin_pixel[0] - (y - self._origin[1]) / self._gsd
@@ -262,4 +263,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

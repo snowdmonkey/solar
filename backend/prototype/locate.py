@@ -5,10 +5,11 @@ The position is obtained by leveraging provided gps information and image matchi
 from typing import List, Tuple, Optional
 
 import utm
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, MultiPolygon
 from shapely.ops import nearest_points
 from semantic import IRProfile
 from geo_mapper import GeoMapper
+from shape_match import affine_transform_utm, TransformMatrix, Aligner
 
 UTM = Tuple[float, float, int]
 GPS = Tuple[float, float]
@@ -85,6 +86,14 @@ class PanelGroup:
         """
         return self._bounds[1]
 
+    @property
+    def polygon(self) -> Polygon:
+        """
+        return the panel group as a polygon, the coordinates is UTM coordinates
+        :return: Polygon([(easting1, northing1), (easting2, northing2), ...])
+        """
+        return self._polygon
+
     def distance_to_utm(self, utm_pos: Tuple[float, float, int]) -> float:
         """
         calculate the distance between the panel group to a position based on utm coordinates
@@ -125,7 +134,7 @@ class Station:
 
     def __init__(self):
 
-        self._panel_groups = list()
+        self._panel_groups = list()  # type: List[PanelGroup]
         self._utm_zone = None
 
     @property
@@ -184,8 +193,8 @@ class Positioner:
     def __init__(self):
         pass
 
-    @staticmethod
-    def locate(profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
+    @classmethod
+    def locate(cls, profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
         """
         the method will map an IRProfile to geographical locations with a geo mapper and calibrate it with a Station
         :param profile: the IRProfile that will be positioned
@@ -193,33 +202,73 @@ class Positioner:
         :param farm: Station information
         :return: None
         """
+
+        # get an affine transformation to calibrate profile's physical location
+        matrix = cls._get_transform(profile=profile, geo_mapper=geo_mapper, farm=farm)
+
         for panel_group in profile.panel_groups:
 
             # map a panel group profile to a physical panel group
             centroid_xy = panel_group.centroid_xy
-            centroid_gps = geo_mapper.pixel2gps(centroid_xy[1], centroid_xy[0])
-            closest_panel = farm.get_closest_group(gps=centroid_gps)
+            # centroid_gps = geo_mapper.pixel2gps(centroid_xy[1], centroid_xy[0])
+            centroid_utm = geo_mapper.pixel2utm(centroid_xy[1], centroid_xy[0])
+            calibrated_utm = affine_transform_utm(centroid_utm, matrix)
+
+            # closest_panel = farm.get_closest_group(gps=centroid_gps)
+            closest_panel = farm.get_closest_group(utm_pos=calibrated_utm)
             panel_group.set_panel_group_id(closest_panel.panel_group_id)
 
             # adjust a defect's utm with its relative position on a panel group
             for defect in panel_group.defects:
                 defect_rc = defect.points_rc[0]
-                to_top_ratio = (defect_rc[0] - panel_group.most_top) / (panel_group.most_bottom - panel_group.most_top)
-                assert 0.0 <= to_top_ratio <= 1.0
-
-                if to_top_ratio < 0.1:
-                    to_top_ratio = 0.1
-
-                if to_top_ratio > 0.9:
-                    to_top_ratio = 0.9
+                # to_top_ratio = \
+                #     (defect_rc[0] - panel_group.most_top) / (panel_group.most_bottom - panel_group.most_top)
+                # assert 0.0 <= to_top_ratio <= 1.0
+                #
+                # if to_top_ratio < 0.1:
+                #     to_top_ratio = 0.1
+                #
+                # if to_top_ratio > 0.9:
+                #     to_top_ratio = 0.9
 
                 defect_utm = geo_mapper.pixel2utm(*defect_rc)
-                corrected_northing = \
-                    closest_panel.most_north - (closest_panel.most_north-closest_panel.least_north)*to_top_ratio
-                corrected_utm = defect_utm[0], corrected_northing, defect_utm[2]
+                # corrected_northing = \
+                #     closest_panel.most_north - (closest_panel.most_north-closest_panel.least_north)*to_top_ratio
+                # corrected_utm = defect_utm[0], corrected_northing, defect_utm[2]
+
+                corrected_utm = affine_transform_utm(defect_utm, matrix)
 
                 # make sure the defect location is inside the closest panel
                 if closest_panel.distance_to_utm(corrected_utm) != 0:
                     corrected_utm = closest_panel.nearest_utm(corrected_utm)
 
                 defect.set_utm(corrected_utm)
+
+    @staticmethod
+    def _get_transform(profile: IRProfile, geo_mapper: GeoMapper, farm: Station) -> TransformMatrix:
+        """
+        this function returns an affine transformation. This transformation applies to UTM coordinates. It will try to
+        match the IRProfile to a Station
+        :param profile: An IRProfile of a ir image generate with semantic analysis
+        :param geo_mapper: geo mapper to map the profile to physical locations
+        :param farm: a Station store the physical information of a solar farm
+        :return: parameters for an affine transformation
+        """
+        profile_polygons = list()
+
+        for group in profile.panel_groups:
+            poly = group.polygon
+            utms = [geo_mapper.pixel2utm(row=x[0], col=x[1]) for x in poly]
+            profile_polygons.append(Polygon([(x[0], x[1]) for x in utms]))
+
+        profile_multi_poly = MultiPolygon(profile_polygons)
+
+        center_gps = geo_mapper.pixel2gps(row=int(profile.height/2), col=int(profile.width/2))
+        group_poly = \
+            MultiPolygon([group.polygon for group in farm.panel_groups if group.distance_to_gps(center_gps) < 20])
+
+        aligner = Aligner()
+
+        params = aligner.align(group_poly, profile_multi_poly)
+
+        return params

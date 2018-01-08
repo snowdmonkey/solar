@@ -202,6 +202,16 @@ class PanelGroupProfile:
         cy = int(m['m01'] / m['m00'])
         return cx, cy
 
+    @property
+    def polygon(self) -> List[Tuple[int, int]]:
+        """
+        get a polygon of the panel group through approximating the contour
+        :return: list of vertices [(row1, col1), (row2, col2), (row3, col3)...]
+        """
+        approx = cv2.approxPolyDP(self._cnt, 5, True)
+        approx = approx[:, 0, [1, 0]]
+        return [tuple(x) for x in approx.tolist()]
+
 
 class IRProfile:
     """this is the class describing the profile of a gray scale ir image
@@ -214,6 +224,14 @@ class IRProfile:
         self._height = None
         self._width = None
         self._name = None
+
+    @property
+    def height(self) -> int:
+        return self._height
+
+    @property
+    def width(self) -> int:
+        return self._width
 
     @property
     def name(self) -> Optional[str]:
