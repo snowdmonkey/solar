@@ -60,17 +60,17 @@ class ImageProcessPipeline:
         batch_process_rotation(folder_path=join(self._image_folder, "ir"))
         self.logger.info("processing rotation ends")
 
-    def _process_label(self):
-        self.logger.info("starts to process labeling")
-
-        results = batch_process_label(folder_path=join(self._image_folder, "ir"))
-        for d in results:
-            d.update({"date": self._date, "station": self._station})
-        if self._mongo_client is not None:
-            collection = self._mongo_client.get_database("solar").get_collection("rect")
-            collection.delete_many({"station": self._station, "date": self._date})
-            collection.insert_many(results)
-        self.logger.info("defects labeling ends")
+    # def _process_label(self):
+    #     self.logger.info("starts to process labeling")
+    #
+    #     results = batch_process_label(folder_path=join(self._image_folder, "ir"))
+    #     for d in results:
+    #         d.update({"date": self._date, "station": self._station})
+    #     if self._mongo_client is not None:
+    #         collection = self._mongo_client.get_database("solar").get_collection("rect")
+    #         collection.delete_many({"station": self._station, "date": self._date})
+    #         collection.insert_many(results)
+    #     self.logger.info("defects labeling ends")
 
     def _process_profile(self):
         self.logger.info("start to process profiling")
@@ -101,22 +101,22 @@ class ImageProcessPipeline:
 
         self.logger.info("defects aggregating ends")
 
-    def _process_locate(self):
-        self.logger.info("starts to process defects locating")
-
-        defects = batch_process_locate(folder_path=join(self._image_folder, "ir"),
-                                       gsd=self._gsd_ir,
-                                       group_criteria=2.0)
-
-        for d in defects:
-            d.update({"station": self._station, "date": self._date, "gsd": self._gsd_ir})
-
-        if self._mongo_client is not None:
-            collection = self._get_mongo_client().get_database("solar").get_collection("defect")
-            collection.delete_many({"station": self._station, "date": self._date})
-            collection.insert_many(defects)
-
-        self.logger.info("defects locating ends")
+    # def _process_locate(self):
+    #     self.logger.info("starts to process defects locating")
+    #
+    #     defects = batch_process_locate(folder_path=join(self._image_folder, "ir"),
+    #                                    gsd=self._gsd_ir,
+    #                                    group_criteria=2.0)
+    #
+    #     for d in defects:
+    #         d.update({"station": self._station, "date": self._date, "gsd": self._gsd_ir})
+    #
+    #     if self._mongo_client is not None:
+    #         collection = self._get_mongo_client().get_database("solar").get_collection("defect")
+    #         collection.delete_many({"station": self._station, "date": self._date})
+    #         collection.insert_many(defects)
+    #
+    #     self.logger.info("defects locating ends")
 
     def run(self):
         self._process_exif()

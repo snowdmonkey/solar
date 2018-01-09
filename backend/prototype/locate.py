@@ -5,6 +5,7 @@ The position is obtained by leveraging provided gps information and image matchi
 from typing import List, Tuple, Optional
 
 import utm
+import matplotlib.pyplot as plt
 from shapely.geometry import Point, Polygon, MultiPolygon
 from shapely.ops import nearest_points
 from semantic import IRProfile
@@ -272,3 +273,35 @@ class Positioner:
         params = aligner.align(group_poly, profile_multi_poly)
 
         return params
+
+    @staticmethod
+    def _plot_polygon(ax, polygon: Polygon, **kwargs):
+        x, y = polygon.exterior.xy
+        ax.plot(x, y, **kwargs)
+
+    @classmethod
+    def draw_calibration(cls, profile: IRProfile, geo_mapper: GeoMapper,
+                         farm: Station, matrix: TransformMatrix) -> plt.Figure:
+        """
+        return a figure to show the calibration results, mainly for results verification
+        :param profile: an ir profile to calibrate
+        :param geo_mapper: geo mapper of the ir profile
+        :param farm: a station that the profile will calibrate to
+        :param matrix: affine transformation matrix (a, b, d, e, xoff, yoff)
+        :return: a matplotlib Figure
+        """
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.set_aspect("equal")
+
+        profile_polygons = list()
+
+        for group in profile.panel_groups:
+            poly = group.polygon
+            utms = [geo_mapper.pixel2utm(row=x[0], col=x[1]) for x in poly]
+            profile_polygons.append(Polygon([(x[0], x[1]) for x in utms]))
+
+        # plot
+        for p in profile_polygons:
+            cls._plot_polygon(ax, p, color="r")
+

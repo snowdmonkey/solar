@@ -13,6 +13,9 @@ from torch.autograd import Variable
 from detect_hotspot import HotSpotDetector
 from geo_mapper import GeoMapper
 from fcn.utils import get_panel_group_model
+# from locate import Station
+import matplotlib.pyplot as plt
+
 
 logger = logging.getLogger(__name__)
 

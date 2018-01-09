@@ -591,6 +591,8 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
     # defect_info = get_mongo_client().get_database("solar")\
     #     .get_collection("defect")\
     #     .find_one({"station": station, "date": date, "defectId": defect_id})
+    if defect_info is None:
+        abort(404)
     image_names = {x.get("image") for x in defect_info.get("rects")}
     color_map = request.args.get("colorMap")
     if color_map is not None:
