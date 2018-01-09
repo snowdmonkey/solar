@@ -43,9 +43,9 @@ def affine_transform_utm(utm: UTM, matrix: TransformMatrix) -> UTM:
     :param matrix: a set of affine transformation parameters
     :return: transformed utm
     """
-    p = Point(utm.easting, utm.northing)
+    p = Point(utm[0], utm[1])
     p = affine_transform(p, matrix)  # type: Point
-    return UTM(p.x, p.y, utm.zone)
+    return UTM(p.x, p.y, utm[2])
 
 
 class Aligner:
@@ -67,7 +67,7 @@ class Aligner:
             # return neg_overlap+false_pos_overlap-pos_overlap
             return false_pos_overlap - 2.0*pos_overlap
 
-        bounds = ((-20, 20), (-3, 3), (0.7, 1.5), (-20, 20))
+        bounds = ((-3, 3), (-3, 3), (0.7, 1.5), (-20, 20))
 
         # bounds = ((-50, 50), (-50, 50), (0.7, 1.5), (-20, 20))
 

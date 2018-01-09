@@ -11,14 +11,16 @@ from typing import Union, List, Dict
 import cv2
 import numpy as np
 import utm
-from scipy.cluster.hierarchy import linkage, cut_tree
+import matplotlib.pyplot as plt
 
+from scipy.cluster.hierarchy import linkage, cut_tree
 from defect_category import DefectCategory
 from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
 from semantic import FcnIRProfiler
+
 
 logger = logging.getLogger(__name__)
 
@@ -208,9 +210,13 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
     """
     rotated_folder_path = join(folder_path, "rotated")
     profile_folder_path = join(folder_path, "profile")
+    affine_folder_path = join(folder_path, "affine")
 
     if not os.path.exists(profile_folder_path):
         os.mkdir(profile_folder_path)
+
+    if not os.path.exists(affine_folder_path):
+        os.mkdir(affine_folder_path)
 
     # profiler = ThIRProfiler()
     profiler = FcnIRProfiler()
@@ -245,14 +251,23 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
         # construct the geo mapper
         image_latitude = d.get("GPSLatitude")
         image_longitude = d.get("GPSLongitude")
-        image_height = d.get("ImageWidth")
-        image_width = d.get("ImageHeight")
+        # image_height = d.get("ImageWidth")
+        # image_width = d.get("ImageHeight")
+        image_height = profile.height
+        image_width = profile.width
 
         geo_mapper = UTMGeoMapper(gsd=gsd, origin_gps=(image_latitude, image_longitude),
                                   origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
 
         # positioning
-        positioner.locate(profile, geo_mapper, station)
+        matrix = positioner.locate(profile, geo_mapper, station)
+
+        # save affine transformation figure for checking
+        if matrix is not None:
+            fig = plt.figure()
+            positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
+            fig.savefig(join(affine_folder_path, "{}.jpg".format(base_name)))
+            plt.close(fig)
 
         # save the profile to image for checking
         cv2.imwrite(join(profile_folder_path, "{}.jpg".format(base_name)), profile.draw())

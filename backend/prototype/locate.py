@@ -6,8 +6,10 @@ from typing import List, Tuple, Optional
 
 import utm
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from shapely.geometry import Point, Polygon, MultiPolygon
 from shapely.ops import nearest_points
+from shapely.affinity import affine_transform
 from semantic import IRProfile
 from geo_mapper import GeoMapper
 from shape_match import affine_transform_utm, TransformMatrix, Aligner
@@ -195,17 +197,19 @@ class Positioner:
         pass
 
     @classmethod
-    def locate(cls, profile: IRProfile, geo_mapper: GeoMapper, farm: Station):
+    def locate(cls, profile: IRProfile, geo_mapper: GeoMapper, farm: Station) -> Optional[TransformMatrix]:
         """
         the method will map an IRProfile to geographical locations with a geo mapper and calibrate it with a Station
         :param profile: the IRProfile that will be positioned
         :param geo_mapper: geo mapper that can map pixels to geographical locations
         :param farm: Station information
-        :return: None
+        :return: affine transform matrix
         """
 
         # get an affine transformation to calibrate profile's physical location
-        matrix = cls._get_transform(profile=profile, geo_mapper=geo_mapper, farm=farm)
+        matrix = None
+        if len(profile.panel_groups) > 0:
+            matrix = cls._get_transform(profile=profile, geo_mapper=geo_mapper, farm=farm)
 
         for panel_group in profile.panel_groups:
 
@@ -244,6 +248,7 @@ class Positioner:
                     corrected_utm = closest_panel.nearest_utm(corrected_utm)
 
                 defect.set_utm(corrected_utm)
+        return matrix
 
     @staticmethod
     def _get_transform(profile: IRProfile, geo_mapper: GeoMapper, farm: Station) -> TransformMatrix:
@@ -275,22 +280,22 @@ class Positioner:
         return params
 
     @staticmethod
-    def _plot_polygon(ax, polygon: Polygon, **kwargs):
+    def _plot_polygon(ax: Axes, polygon: Polygon, **kwargs):
         x, y = polygon.exterior.xy
         ax.plot(x, y, **kwargs)
 
     @classmethod
     def draw_calibration(cls, profile: IRProfile, geo_mapper: GeoMapper,
-                         farm: Station, matrix: TransformMatrix) -> plt.Figure:
+                         farm: Station, matrix: TransformMatrix, fig: plt.Figure):
         """
         return a figure to show the calibration results, mainly for results verification
         :param profile: an ir profile to calibrate
         :param geo_mapper: geo mapper of the ir profile
         :param farm: a station that the profile will calibrate to
         :param matrix: affine transformation matrix (a, b, d, e, xoff, yoff)
-        :return: a matplotlib Figure
+        :param fig: a matplotlib figure to draw
+        :return: None
         """
-        fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.set_aspect("equal")
 
@@ -301,7 +306,24 @@ class Positioner:
             utms = [geo_mapper.pixel2utm(row=x[0], col=x[1]) for x in poly]
             profile_polygons.append(Polygon([(x[0], x[1]) for x in utms]))
 
-        # plot
+        profile_polygons = MultiPolygon(profile_polygons)
+
+        # plot profile polygons
         for p in profile_polygons:
             cls._plot_polygon(ax, p, color="r")
+
+        gps = geo_mapper.pixel2gps(int(profile.height/2), int(profile.width/2))
+
+        # ground truth panel group polygon
+        group_poly = MultiPolygon([group.polygon for group in farm.panel_groups if group.distance_to_gps(gps) < 20])
+        for p in group_poly:
+            cls._plot_polygon(ax, p, color="b")
+
+        # transformed polygons
+        out = affine_transform(profile_polygons, matrix)
+
+        for p in out:
+            cls._plot_polygon(ax, p, color="g")
+
+        # return fig
 
