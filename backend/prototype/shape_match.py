@@ -3,6 +3,7 @@ this module provide some utilities based on shapely
 """
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.point import Point
+from shapely.geometry import box
 from typing import NamedTuple
 from shapely.affinity import translate, scale, rotate, affine_transform, interpret_origin
 from scipy.optimize import minimize
@@ -57,7 +58,7 @@ class Aligner:
         :param pos: a shape we try to align it with pattern
         :return: transformation parameters
         """
-        def target(x, pattern: BaseGeometry, pos: BaseGeometry):
+        def target1(x, pattern: BaseGeometry, pos: BaseGeometry):
             params = _TargetTransformParams(x[0], x[1], x[2], x[3])
             pos_trans = _target_affine_transform(pos, params)
             # neg_trans = affine_transform(neg, params)
@@ -66,6 +67,19 @@ class Aligner:
             false_pos_overlap = pos_trans.difference(pattern).area
             # return neg_overlap+false_pos_overlap-pos_overlap
             return false_pos_overlap - 2.0*pos_overlap
+
+        def target(x, pattern: BaseGeometry, pos: BaseGeometry):
+            params = _TargetTransformParams(x[0], x[1], x[2], x[3])
+            pos_trans = _target_affine_transform(pos, params)
+
+            neg = box(*pos_trans.bounds).difference(pos)
+            # neg = box(*pos.bounds).difference(pos)
+            # neg_trans = _target_affine_transform(neg, params)
+            pos_overlap = pattern.intersection(pos_trans).area
+            neg_overlap = pattern.intersection(neg).area
+            false_pos_overlap = pos_trans.difference(pattern).area
+            # return neg_overlap+false_pos_overlap-pos_overlap
+            return false_pos_overlap - 2.0 * pos_overlap + neg_overlap
 
         bounds = ((-3, 3), (-3, 3), (0.7, 1.5), (-20, 20))
 
@@ -76,17 +90,6 @@ class Aligner:
                                  [-2.0, 0.0, 1.0, 0.0],
                                  [0.0, 2.0, 1.0, 0.0],
                                  [0.0, -2.0, 1.0, 0.0]])
-
-        # start_points = np.array([[0.0, 0.0, 1.0, 0.0],
-        #                          [2.0, 0.0, 1.0, 0.0],
-        #                          [-2.0, 0.0, 1.0, 0.0],
-        #                          [0.0, 2.0, 1.0, 0.0],
-        #                          [0.0, -2.0, 1.0, 0.0],
-        #                          [2.0, 2.0, 1.0, 0.0],
-        #                          [-2.0, 2.0, 1.0, 0.0],
-        #                          [2.0, -2.0, 1.0, 0.0],
-        #                          [-2.0, -2.0, 1.0, 0.0]
-        #                          ])
 
         # res = minimize(target, np.array([0.0, 0.0, 1.0, 0.0]), args=(pattern, pos), bounds=bounds, method="L-BFGS-B")
 
@@ -100,6 +103,8 @@ class Aligner:
         results.sort(key=lambda x: x.fun)
 
         data = results[0].x.data
+
+        logging.debug("minimized function value is {}".format(results[0].fun))
 
         result = _TargetTransformParams(data[0], data[1], data[2], data[3])
 
