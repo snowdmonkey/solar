@@ -382,12 +382,32 @@ def get_status_by_station_and_range(station: str, start: str, end: str):
     exif_coll = get_exif_collection()
     dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x <= end]
-    dates.sort()
-    results = list()
+
+    results = list()  # type: List[StationStatus]
     for date in dates:
         status = _get_station_status(station, date)
         if status is not None:
-            results.append(status._asdict())
+            results.append(status)
+
+    sort_key = request.args.get("sortby", "date")
+
+    if sort_key == "date":
+        results.sort(key=lambda x: x.date)
+    elif sort_key == "frate":
+        results.sort(key=lambda x: x.confirmed)
+    else:
+        abort(400, "unsupported sort key")
+
+    order = request.args.get("order", "descending")
+
+    if order == "ascending":
+        pass
+    elif order == "descending":
+        results.reverse()
+    else:
+        abort(400, "unsupported sort order")
+
+    results = [x._asdict() for x in results]
 
     return jsonify(results)
 
@@ -398,12 +418,32 @@ def get_status_by_station_and_start(station: str, start: str):
     exif_coll = get_exif_collection()
     dates = exif_coll.find({"station": station}, {"_id": 0, "date": 1}).distinct("date")
     dates = [x for x in dates if start <= x]
-    dates.sort()
-    results = list()
+
+    results = list()  # type: List[StationStatus]
     for date in dates:
         status = _get_station_status(station, date)
         if status is not None:
-            results.append(status._asdict())
+            results.append(status)
+
+    sort_key = request.args.get("sortby", "date")
+
+    if sort_key == "date":
+        results.sort(key=lambda x: x.date)
+    elif sort_key == "frate":
+        results.sort(key=lambda x: x.confirmed)
+    else:
+        abort(400, "unsupported sort key")
+
+    order = request.args.get("order", "descending")
+
+    if order == "ascending":
+        pass
+    elif order == "descending":
+        results.reverse()
+    else:
+        abort(400, "unsupported sort order")
+
+    results = [x._asdict() for x in results]
 
     return jsonify(results)
 

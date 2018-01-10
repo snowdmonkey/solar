@@ -145,6 +145,20 @@ paths:
           required: true
           type: string
           description: end date string in YYYY-MM-DD
+        - name: sortby
+          in: query
+          required: false
+          type: string
+          enum:
+            - date
+            - frate
+        - name: order
+          in: query
+          type: string
+          enum:
+            - ascending
+            - descending
+          default: descending
       responses:
         '200':
           description: OK
@@ -152,8 +166,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/StationStatus'
-        '404':
-          description: Status info not found on the period of the station
+        '400':
+          description: invalid sort key or sort order
   '/api/v1/station/{stationId}/status/start/{start}':
     get:
       tags:
@@ -175,6 +189,20 @@ paths:
           required: true
           type: string
           description: start date string in YYYY-MM-DD
+        - name: sortby
+          in: query
+          required: false
+          type: string
+          enum:
+            - date
+            - frate
+        - name: order
+          in: query
+          type: string
+          enum:
+            - ascending
+            - descending
+          default: descending
       responses:
         '200':
           description: OK
@@ -182,8 +210,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/StationStatus'
-        '404':
-          description: Status info not found on the period of the station
+        '400':
+          description: invalid sort key or sort order
   '/api/v1/station/{stationId}/date':
     get:
       tags:
