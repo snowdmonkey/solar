@@ -21,6 +21,7 @@ from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
 from semantic import FcnIRProfiler
 
+plt.switch_backend("agg")
 
 logger = logging.getLogger(__name__)
 
