@@ -21,7 +21,7 @@ from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
 from semantic import FcnIRProfiler
 
-plt.switch_backend("agg")
+# plt.switch_backend("agg")
 
 logger = logging.getLogger(__name__)
 
@@ -264,11 +264,11 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
         matrix = positioner.locate(profile, geo_mapper, station)
 
         # save affine transformation figure for checking
-        if matrix is not None:
-            fig = plt.figure()
-            positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
-            fig.savefig(join(affine_folder_path, "{}.jpg".format(base_name)))
-            plt.close(fig)
+        # if matrix is not None:
+        #     fig = plt.figure()
+        #     positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
+        #     fig.savefig(join(affine_folder_path, "{}.jpg".format(base_name)))
+        #     plt.close(fig)
 
         # save the profile to image for checking
         cv2.imwrite(join(profile_folder_path, "{}.jpg".format(base_name)), profile.draw())
