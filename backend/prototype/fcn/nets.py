@@ -220,3 +220,9 @@ def fc_dense_net103(n_classes, channels: int):
     return FCDenseNet(in_channels=channels, down_blocks=(4, 5, 7, 10, 12),
                       up_blocks=(12, 10, 7, 5, 4), bottleneck_layers=15,
                       growth_rate=16, out_chans_first_conv=48, n_classes=n_classes)
+
+
+# def FCDenseNet29(n_classes):
+#     return FCDenseNet(in_channels=1, down_blocks=(3, 3, 3),
+#                  up_blocks=(3, 3, 3), bottleneck_layers=3,
+#                  growth_rate=12, out_chans_first_conv=48, n_classes=n_classes)

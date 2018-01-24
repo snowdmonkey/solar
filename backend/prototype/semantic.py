@@ -352,7 +352,7 @@ class IRProfiler(ABC):
         sub_img = np.zeros_like(image)
         cv2.drawContours(sub_img, [panel_group.contour], -1, 255, -1)
         sub_img[sub_img == 255] = image[sub_img == 255]
-        hot_spot_detector = HotSpotDetector(sub_img, 4.0)
+        hot_spot_detector = HotSpotDetector(sub_img, 3.0)
         hot_spot = hot_spot_detector.get_hot_spot()
         points = hot_spot.points
 
@@ -378,7 +378,7 @@ class ThIRProfiler(IRProfiler):
     """this class does image segmentation based on first order and second order threshold
     """
 
-    def __init__(self, panel_min: int = 100, panel_max: int = 1000, panel_approx_th: int = 5, n_vertex_th: int = 18):
+    def __init__(self, panel_min: int = 100, panel_max: int = 10000, panel_approx_th: int = 5, n_vertex_th: int = 18):
         """
         :param panel_min: minimum area for a panel, in pixels
         :param panel_max: maximum area for a panel, in pixels
@@ -515,11 +515,16 @@ def main():
 
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument("--method", type=str, choices=["th", "dl"], default="dl")
     parser.add_argument("img", type=str, help="path of an IR image")
     args = parser.parse_args()
 
-    # segmentor = ThIRProfiler()
-    segmentor = FcnIRProfiler()
+    if args.method == "th":
+        segmentor = ThIRProfiler()
+    elif args.method == "dl":
+        segmentor = FcnIRProfiler()
+    else:
+        raise Exception("unrecognized method")
     profile = segmentor.create_profile(args.img)
     img = profile.draw()
     cv2.imshow("img", img)

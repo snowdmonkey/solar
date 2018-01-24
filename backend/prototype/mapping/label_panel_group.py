@@ -373,10 +373,15 @@ class ColorBasedLabeler(PanelGroupLabeler):
         th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
 
         _, contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = [x for x in contours if cv2.contourArea(x) > 5000]
+        contours = [x for x in contours if cv2.contourArea(x) > 2500]
         for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            results.append([(y, x), (y+h, x), (y+h, x+w), (y, x+w)])
+            # x, y, w, h = cv2.boundingRect(cnt)
+            # results.append([(y, x), (y+h, x), (y+h, x+w), (y, x+w)])
+            box = cv2.minAreaRect(cnt)
+            box = cv2.boxPoints(box)
+            box = box.astype(np.uint)
+            box = box.tolist()
+            results.append([tuple(x[::-1]) for x in box])
         return results
 
     @staticmethod

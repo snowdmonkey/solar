@@ -267,7 +267,7 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
         # if matrix is not None:
         #     fig = plt.figure()
         #     positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
-        #     fig.savefig(join(affine_folder_path, "{}.jpg".format(base_name)))
+        #     fig.savefig(join(affine_folder_path, "{}.png".format(base_name)))
         #     plt.close(fig)
 
         # save the profile to image for checking
