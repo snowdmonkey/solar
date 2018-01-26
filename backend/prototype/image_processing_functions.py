@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import subprocess
+import platform
 from os import listdir
 from os.path import join, basename
 from typing import Union, List, Dict
@@ -19,8 +20,8 @@ from detect_hotspot import HotSpotDetector
 from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
-from semantic import FcnIRProfiler
-
+from semantic import FcnIRProfiler, ThIRProfiler
+from misc import get_gsd
 # plt.switch_backend("agg")
 
 logger = logging.getLogger(__name__)
@@ -58,16 +59,25 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
 
     file_names = [x for x in os.listdir(folder_path) if x.endswith(".jpg")]
 
-    cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
-    # results = list()
-    for file_name in file_names:
-        cmd.append(join(folder_path, file_name))
+    # cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
+    results = list()
+
+    # extract exif of 100 files a time
+    for i in range(len(file_names)//100 + 1):
+        cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
+        cmd.extend([join(folder_path, x) for x in file_names[i*100:(i+1)*100]])
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        out = proc.stdout
+        results.extend(json.loads(out.decode("utf-8")))
+
+    # for file_name in file_names:
+    #     cmd.append(join(folder_path, file_name))
 
     # logger.info("start to extract exif from {}".format(file_name))
 
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-    out = proc.stdout
-    results = json.loads(out.decode("utf-8"))
+    # proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+    # out = proc.stdout
+    # results = json.loads(out.decode("utf-8"))
         # results.append(result)
     for result in results:
         result["GPSLatitude"] = float(result.get("GPSLatitude"))
@@ -81,7 +91,7 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     return results
 
 
-def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None):
+def batch_process_rotate_n_scale(folder_path: str, exif_path: Union[None, str] = None):
     """
     the function will create a sub folder under folder_path which contains the rotated images. And the images under
     folder path will be rotated so they will all head north. And the degrees for rotate each image should be provided
@@ -107,31 +117,51 @@ def batch_process_rotation(folder_path: str, exif_path: Union[None, str] = None)
         file_name = d.get("FileName")
         image_path = join(folder_path, file_name)
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        raw = _get_raw_from_string(d.get("RawThermalImage")[7:])
+        raw_flag = False # indicating whether raw temperature is available
+        if d.get("RawThermalImage") is not None:
+            raw_flag = True
+        if raw_flag is True:
+            raw = _get_raw_from_string(d.get("RawThermalImage")[7:])
         degree = d.get("GimbalYawDegree")
+
+        focal_length = float(d.get("FocalLength").replace(" mm", ""))
+        relative_altitude = d.get("RelativeAltitude")
+        pitch_size = 17
+        gsd = get_gsd(pitch_size, focal_length, relative_altitude)
+
+        scale_factor = gsd / 0.0375
+
         if degree is not None:
             if abs(degree) < 10:
                 rotated_img = img
-                rotated_raw = raw
+                if raw_flag:
+                    rotated_raw = raw
             elif abs(degree - 90.0) < 10:
-                rotated_img = rotate_and_scale(img, -90.0)
-                rotated_raw = rotate_and_scale(raw, -90.0)
+                rotated_img = rotate_and_scale(img, -90.0, scale_factor)
+                if raw_flag:
+                    rotated_raw = rotate_and_scale(raw, -90.0, scale_factor)
             elif abs(degree + 90.0) < 10:
-                rotated_img = rotate_and_scale(img, 90.0)
-                rotated_raw = rotate_and_scale(raw, 90.0)
+                rotated_img = rotate_and_scale(img, 90.0, scale_factor)
+                if raw_flag:
+                    rotated_raw = rotate_and_scale(raw, 90.0, scale_factor)
             elif abs(degree - 180.0) < 10:
-                rotated_img = rotate_and_scale(img, 180.0)
-                rotated_raw = rotate_and_scale(raw, 180.0)
+                rotated_img = rotate_and_scale(img, 180.0, scale_factor)
+                if raw_flag:
+                    rotated_raw = rotate_and_scale(raw, 180.0, scale_factor)
             elif abs(degree + 180.0) < 10:
-                rotated_img = rotate_and_scale(img, 180.0)
-                rotated_raw = rotate_and_scale(raw, 180.0)
+                rotated_img = rotate_and_scale(img, 180.0, scale_factor)
+                if raw_flag:
+                    rotated_raw = rotate_and_scale(raw, 180.0, scale_factor)
             else:
                 logging.warning("%s is ignored since its yaw is %f degrees", file_name, degree)
                 continue
             rotated_img_path = join(rotate_folder_path, file_name)
-            rotated_raw_path = join(rotate_raw_folder_path, file_name)
+
             cv2.imwrite(rotated_img_path, rotated_img)
-            cv2.imwrite(rotated_raw_path.replace(".jpg", ".tif"), rotated_raw)
+
+            if raw_flag:
+                rotated_raw_path = join(rotate_raw_folder_path, file_name)
+                cv2.imwrite(rotated_raw_path.replace(".jpg", ".tif"), rotated_raw)
 
 
 def batch_process_label(folder_path: str) -> List[dict]:
@@ -202,11 +232,12 @@ def batch_process_label(folder_path: str) -> List[dict]:
     return results
 
 
-def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
+def batch_process_profile(folder_path: str, gsd: float, method: str) -> List[dict]:
     """
     create profile for the images under the rotated sub-directory of folder path
     :param folder_path: folder for the raw image
     :param gsd: ground sampling distance, in meters
+    :param method: analysis method, dl for deep learning, th for threshold based
     :return: list of image semantic analysis results
     """
     rotated_folder_path = join(folder_path, "rotated")
@@ -219,8 +250,13 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
     if not os.path.exists(affine_folder_path):
         os.mkdir(affine_folder_path)
 
-    # profiler = ThIRProfiler()
-    profiler = FcnIRProfiler()
+    if method == "dl":
+        profiler = FcnIRProfiler()
+    elif method == "th":
+        profiler = ThIRProfiler()
+    else:
+        raise Exception("unknown method")
+
     positioner = Positioner()
     station = Station()
 
@@ -261,14 +297,19 @@ def batch_process_profile(folder_path: str, gsd: float) -> List[dict]:
                                   origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
 
         # positioning
-        matrix = positioner.locate(profile, geo_mapper, station)
+        try:
+            matrix = positioner.locate(profile, geo_mapper, station)
+        except Exception as e:
+            logger.error("position calibration failed")
+            logger.error(e, exc_info=True)
+            matrix = None
 
         # save affine transformation figure for checking
-        # if matrix is not None:
-        #     fig = plt.figure()
-        #     positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
-        #     fig.savefig(join(affine_folder_path, "{}.png".format(base_name)))
-        #     plt.close(fig)
+        if (matrix is not None) and (platform.system() == "Windows"):
+            fig = plt.figure()
+            positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
+            fig.savefig(join(affine_folder_path, "{}.png".format(base_name)))
+            plt.close(fig)
 
         # save the profile to image for checking
         cv2.imwrite(join(profile_folder_path, "{}.jpg".format(base_name)), profile.draw())

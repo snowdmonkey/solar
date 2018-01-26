@@ -5,7 +5,7 @@ from os.path import join
 from typing import Optional
 from pymongo import MongoClient
 # from geo_mapper import GeoMapper, TifGeoMapper
-from image_processing_functions import batch_process_exif, batch_process_rotation, batch_process_label, \
+from image_processing_functions import batch_process_exif, batch_process_rotate_n_scale, batch_process_label, \
     batch_process_locate, batch_process_profile, batch_process_aggregate
 
 
@@ -15,12 +15,13 @@ class ImageProcessPipeline:
     The folder should typically be IMG_ROOT/{station}/{date} with subdirectories ir and visual
     """
 
-    def __init__(self, image_folder: str, station: str, date: str):
+    def __init__(self, image_folder: str, station: str, date: str, method: str = "dl"):
         """
         initial the create_profile pipeline
         :param image_folder: the folder where the images rest, there should be sub-folder ir and visual
         :param station
         :param date: str of format YYYY-mm-dd e.g. 2017-06-21
+        :param method: method to analyze the image, dl for deep learning, th for threshold based
         """
         self.logger = logging.getLogger("ImageProcessPipeline")
         self._image_folder = image_folder
@@ -29,6 +30,7 @@ class ImageProcessPipeline:
         self._date = date
         self._station = station
         self._gsd_ir = float(os.getenv("GSD_IR"))
+        self._method = method
 
     def _get_mongo_client(self) -> Optional[MongoClient]:
         mongo_host = os.getenv("MONGO_HOST")
@@ -57,7 +59,7 @@ class ImageProcessPipeline:
 
     def _process_rotate(self):
         self.logger.info("starts to process rotate")
-        batch_process_rotation(folder_path=join(self._image_folder, "ir"))
+        batch_process_rotate_n_scale(folder_path=join(self._image_folder, "ir"))
         self.logger.info("processing rotation ends")
 
     # def _process_label(self):
@@ -75,7 +77,8 @@ class ImageProcessPipeline:
     def _process_profile(self):
         self.logger.info("start to process profiling")
 
-        results = batch_process_profile(folder_path=join(self._image_folder, "ir"), gsd=self._gsd_ir)
+        results = batch_process_profile(folder_path=join(self._image_folder, "ir"),
+                                        gsd=self._gsd_ir, method=self._method)
         for d in results:
             d.update({"date": self._date, "station": self._station})
         if self._mongo_client is not None:
@@ -137,6 +140,7 @@ def main():
     parser.add_argument("--date", help="set date", required=True)
     parser.add_argument("--gsd", help="set ir gsd in meters", type=float, required=True)
     parser.add_argument("--mongo-host", dest="mongo_host", help="set mongo host")
+    parser.add_argument("--method", type=str, choices=["th", "dl"], default="dl")
     parser.add_argument("folder_path", type=str, help="the folder contain ir and visual sub directories")
 
     args = parser.parse_args()
@@ -145,7 +149,8 @@ def main():
     if args.mongo_host is not None:
         os.environ["MONGO_HOST"] = args.mongo_host
 
-    pipeline = ImageProcessPipeline(image_folder=args.folder_path, station=args.station, date=args.date)
+    pipeline = ImageProcessPipeline(image_folder=args.folder_path, station=args.station, date=args.date,
+                                    method=args.method)
     pipeline.run()
 
 

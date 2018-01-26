@@ -72,14 +72,14 @@ class Aligner:
             params = _TargetTransformParams(x[0], x[1], x[2], x[3])
             pos_trans = _target_affine_transform(pos, params)
 
-            neg = box(*pos_trans.bounds).difference(pos)
+            neg = box(*pos_trans.bounds).difference(pos_trans)
             # neg = box(*pos.bounds).difference(pos)
             # neg_trans = _target_affine_transform(neg, params)
             pos_overlap = pattern.intersection(pos_trans).area
             neg_overlap = pattern.intersection(neg).area
             false_pos_overlap = pos_trans.difference(pattern).area
             # return neg_overlap+false_pos_overlap-pos_overlap
-            return false_pos_overlap - 2.0 * pos_overlap + neg_overlap
+            return false_pos_overlap - 2.0 * pos_overlap + neg_overlap+0.1*abs(x[0]) + 0.1*abs(x[1])
 
         bounds = ((-3, 3), (-3, 3), (0.7, 1.5), (-20, 20))
 

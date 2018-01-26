@@ -5,6 +5,7 @@ The position is obtained by leveraging provided gps information and image matchi
 from typing import List, Tuple, Optional
 
 import utm
+import logging
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from shapely.geometry import Point, Polygon, MultiPolygon
@@ -194,10 +195,9 @@ class Positioner:
     """
 
     def __init__(self):
-        pass
+        self._logger = logging.getLogger("Positioner")
 
-    @classmethod
-    def locate(cls, profile: IRProfile, geo_mapper: GeoMapper, farm: Station) -> Optional[TransformMatrix]:
+    def locate(self, profile: IRProfile, geo_mapper: GeoMapper, farm: Station) -> Optional[TransformMatrix]:
         """
         the method will map an IRProfile to geographical locations with a geo mapper and calibrate it with a Station
         :param profile: the IRProfile that will be positioned
@@ -208,8 +208,13 @@ class Positioner:
 
         # get an affine transformation to calibrate profile's physical location
         matrix = None
+
         if len(profile.panel_groups) > 0:
-            matrix = cls._get_transform(profile=profile, geo_mapper=geo_mapper, farm=farm)
+            try:
+                matrix = self._get_transform(profile=profile, geo_mapper=geo_mapper, farm=farm)
+            except Exception as e:
+                self._logger.error("position calibration failed")
+                self._logger.error(e, exc_info=True)
 
         for panel_group in profile.panel_groups:
 
@@ -217,7 +222,11 @@ class Positioner:
             centroid_xy = panel_group.centroid_xy
             # centroid_gps = geo_mapper.pixel2gps(centroid_xy[1], centroid_xy[0])
             centroid_utm = geo_mapper.pixel2utm(centroid_xy[1], centroid_xy[0])
-            calibrated_utm = affine_transform_utm(centroid_utm, matrix)
+
+            if matrix is not None:
+                calibrated_utm = affine_transform_utm(centroid_utm, matrix)
+            else:
+                calibrated_utm = centroid_utm
 
             # closest_panel = farm.get_closest_group(gps=centroid_gps)
             closest_panel = farm.get_closest_group(utm_pos=calibrated_utm)
@@ -241,7 +250,10 @@ class Positioner:
                 #     closest_panel.most_north - (closest_panel.most_north-closest_panel.least_north)*to_top_ratio
                 # corrected_utm = defect_utm[0], corrected_northing, defect_utm[2]
 
-                corrected_utm = affine_transform_utm(defect_utm, matrix)
+                if matrix is not None:
+                    corrected_utm = affine_transform_utm(defect_utm, matrix)
+                else:
+                    corrected_utm = defect_utm
 
                 # make sure the defect location is inside the closest panel
                 if closest_panel.distance_to_utm(corrected_utm) != 0:

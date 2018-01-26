@@ -322,7 +322,7 @@ class IRProfiler(ABC):
     The objective is to output the panels and panel groups
     """
 
-    def __init__(self, panel_group_min: int = 2000):
+    def __init__(self, panel_group_min: int = 4000):
         """
         :param panel_group_min: the minimum area of a panel group, in pixels
         """
@@ -352,7 +352,7 @@ class IRProfiler(ABC):
         sub_img = np.zeros_like(image)
         cv2.drawContours(sub_img, [panel_group.contour], -1, 255, -1)
         sub_img[sub_img == 255] = image[sub_img == 255]
-        hot_spot_detector = HotSpotDetector(sub_img, 3.0)
+        hot_spot_detector = HotSpotDetector(sub_img, 4.0)
         hot_spot = hot_spot_detector.get_hot_spot()
         points = hot_spot.points
 
