@@ -79,7 +79,7 @@ class Aligner:
             neg_overlap = pattern.intersection(neg).area
             false_pos_overlap = pos_trans.difference(pattern).area
             # return neg_overlap+false_pos_overlap-pos_overlap
-            return false_pos_overlap - 2.0 * pos_overlap + neg_overlap+0.1*abs(x[0]) + 0.1*abs(x[1])
+            return false_pos_overlap - 2.0 * pos_overlap + neg_overlap + 0.1*abs(x[0]) + 0.1*abs(x[1])
 
         bounds = ((-3, 3), (-3, 3), (0.7, 1.5), (-20, 20))
 
@@ -104,7 +104,7 @@ class Aligner:
 
         data = results[0].x.data
 
-        logging.debug("minimized function value is {}".format(results[0].fun))
+        logger.debug("minimized function value is {}".format(results[0].fun))
 
         result = _TargetTransformParams(data[0], data[1], data[2], data[3])
 

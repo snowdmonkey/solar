@@ -63,12 +63,13 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     results = list()
 
     # extract exif of 100 files a time
-    for i in range(len(file_names)//100 + 1):
+    for i in range(len(file_names) // 100 + 1):
         cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
         cmd.extend([join(folder_path, x) for x in file_names[i*100:(i+1)*100]])
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         out = proc.stdout
-        results.extend(json.loads(out.decode("utf-8")))
+        if out is not None:
+            results.extend(json.loads(out.decode("utf-8")))
 
     # for file_name in file_names:
     #     cmd.append(join(folder_path, file_name))
