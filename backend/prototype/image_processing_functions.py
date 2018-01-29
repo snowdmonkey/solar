@@ -13,6 +13,8 @@ import cv2
 import numpy as np
 import utm
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 from scipy.cluster.hierarchy import linkage, cut_tree
 from defect_category import DefectCategory
@@ -165,72 +167,72 @@ def batch_process_rotate_n_scale(folder_path: str, exif_path: Union[None, str] =
                 cv2.imwrite(rotated_raw_path.replace(".jpg", ".tif"), rotated_raw)
 
 
-def batch_process_label(folder_path: str) -> List[dict]:
-    """
-    label the images under the rotated sub-directory of folder_path, label the defects with red rectangle
-    :param folder_path: folder for the raw images
-    :return: list of image semantic analysis results
-    """
-    rotate_folder_path = join(folder_path, "rotated")
-    label_folder_path = join(folder_path, "labeled")
-    results = list()
-    if not os.path.exists(label_folder_path):
-        os.mkdir(label_folder_path)
-    file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
-    for file_name in file_names:
-        logger.info("labeling file %s", file_name)
-        base_name = os.path.splitext(basename(file_name))[0]
-        file_path = join(rotate_folder_path, file_name)
-        panel_cropper = PanelCropper(file_path)
-        # sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000, max_area=21500,
-        #                                       verify_rectangle=10, n_vertices_threshold=8)
-        sub_imgs = panel_cropper.get_panels(min_area=100, max_area=1000, n_vertices_threshold=6, approx_threshold=2,
-                                            min_panel_group_area=2000)
-        if len(sub_imgs) == 0:
-            continue
-
-        else:
-            points = list()
-            for img in sub_imgs:
-                hot_spot_detector = HotSpotDetector(img, 4.0)
-                hot_spot = hot_spot_detector.get_hot_spot()
-                points.extend(hot_spot.points)
-
-            mask = np.zeros_like(panel_cropper.raw_img)
-            for point in points:
-                mask[tuple(point)] = 255
-
-            _, contours, h = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
-
-            if len(contours) == 0:
-                continue
-            raw_image = cv2.imread(file_path, cv2.IMREAD_COLOR)
-            rectangles = list()
-            for cnt in contours:
-                x, y, w, h = cv2.boundingRect(cnt)
-                if h < 200 * w:
-                    rectangles.append((x, y, w, h))
-            if len(rectangles) > 0:
-                result = dict()
-                result.update({"image": base_name,
-                               "rects": list(),
-                               "height": raw_image.shape[0],
-                               "width": raw_image.shape[1]})
-
-                for rectangle in rectangles:
-                    x, y, w, h = rectangle
-                    cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
-                    result.get("rects").append({"x": x, "y": y, "w": w, "h": h})
-
-                results.append(result)
-                labeled_img_path = join(label_folder_path, file_name)
-                cv2.imwrite(labeled_img_path, raw_image)
-    outfile_path = join(folder_path, "rect.json")
-    with open(outfile_path, "w") as file:
-        json.dump(results, file)
-
-    return results
+# def batch_process_label(folder_path: str) -> List[dict]:
+#     """
+#     label the images under the rotated sub-directory of folder_path, label the defects with red rectangle
+#     :param folder_path: folder for the raw images
+#     :return: list of image semantic analysis results
+#     """
+#     rotate_folder_path = join(folder_path, "rotated")
+#     label_folder_path = join(folder_path, "labeled")
+#     results = list()
+#     if not os.path.exists(label_folder_path):
+#         os.mkdir(label_folder_path)
+#     file_names = [x for x in listdir(rotate_folder_path) if x.endswith(".jpg")]
+#     for file_name in file_names:
+#         logger.info("labeling file %s", file_name)
+#         base_name = os.path.splitext(basename(file_name))[0]
+#         file_path = join(rotate_folder_path, file_name)
+#         panel_cropper = PanelCropper(file_path)
+#         # sub_imgs = panel_cropper.get_sub_imgs(rotate_n_crop=False, min_area=5000, max_area=21500,
+#         #                                       verify_rectangle=10, n_vertices_threshold=8)
+#         sub_imgs = panel_cropper.get_panels(min_area=100, max_area=1000, n_vertices_threshold=6, approx_threshold=2,
+#                                             min_panel_group_area=2000)
+#         if len(sub_imgs) == 0:
+#             continue
+#
+#         else:
+#             points = list()
+#             for img in sub_imgs:
+#                 hot_spot_detector = HotSpotDetector(img, 4.0)
+#                 hot_spot = hot_spot_detector.get_hot_spot()
+#                 points.extend(hot_spot.points)
+#
+#             mask = np.zeros_like(panel_cropper.raw_img)
+#             for point in points:
+#                 mask[tuple(point)] = 255
+#
+#             _, contours, h = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#             contours = [cv2.convexHull(x) for x in contours if cv2.contourArea(x) > 5]
+#
+#             if len(contours) == 0:
+#                 continue
+#             raw_image = cv2.imread(file_path, cv2.IMREAD_COLOR)
+#             rectangles = list()
+#             for cnt in contours:
+#                 x, y, w, h = cv2.boundingRect(cnt)
+#                 if h < 200 * w:
+#                     rectangles.append((x, y, w, h))
+#             if len(rectangles) > 0:
+#                 result = dict()
+#                 result.update({"image": base_name,
+#                                "rects": list(),
+#                                "height": raw_image.shape[0],
+#                                "width": raw_image.shape[1]})
+#
+#                 for rectangle in rectangles:
+#                     x, y, w, h = rectangle
+#                     cv2.rectangle(raw_image, (x, y), (x + w, y + h), (0, 0, 255), 1)
+#                     result.get("rects").append({"x": x, "y": y, "w": w, "h": h})
+#
+#                 results.append(result)
+#                 labeled_img_path = join(label_folder_path, file_name)
+#                 cv2.imwrite(labeled_img_path, raw_image)
+#     outfile_path = join(folder_path, "rect.json")
+#     with open(outfile_path, "w") as file:
+#         json.dump(results, file)
+#
+#     return results
 
 
 def batch_process_profile(folder_path: str, gsd: float, method: str) -> List[dict]:
@@ -310,6 +312,13 @@ def batch_process_profile(folder_path: str, gsd: float, method: str) -> List[dic
             fig = plt.figure()
             positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
             fig.savefig(join(affine_folder_path, "{}.png".format(base_name)))
+            plt.close(fig)
+
+        if (matrix is not None) and (platform.system() == "Linux"):
+            fig = Figure()
+            canvas = FigureCanvasAgg(fig)
+            positioner.draw_calibration(profile, geo_mapper, station, matrix, fig)
+            canvas.print_figure(join(affine_folder_path, "{}.png".format(base_name)))
             plt.close(fig)
 
         # save the profile to image for checking
@@ -409,114 +418,114 @@ def batch_process_aggregate(folder_path: str, group_criteria: float) -> List[dic
     return defects
 
 
-def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) -> List[dict]:
-    """
-    this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
-    defects to a json file folder_path/defects.json. This function also tries to unify those defects that very close
-    to each other since they might be the same defect.
-    :param folder_path: this is the folder where the raw images rest
-    :param gsd: ground sampling distance in meters
-    :param group_criteria: the distance criteria of grouping the defects, in meters
-    :return: list of defects profile
-    """
-
-    with open(join(folder_path, "exif.json"), "r") as f:
-        exif = json.load(f)
-
-    with open(join(folder_path, "rect.json"), "r") as f:
-        rect_info = json.load(f)
-
-    defects = list()
-
-    for d in rect_info:
-        base_name = d.get("image")
-        # image_latitude = exif.get(base_name).get("GPSLatitude")
-        # image_longitude = exif.get(base_name).get("GPSLongitude")
-        cursor = next((x for x in exif if x.get("image") == base_name))
-        image_latitude = cursor.get("GPSLatitude")
-        image_longitude = cursor.get("GPSLongitude")
-        image_height = d.get("height")
-        image_width = d.get("width")
-
-        geo_mapper = UTMGeoMapper(gsd=gsd, origin_gps=(image_latitude, image_longitude),
-                                  origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
-
-        for rect in d.get("rects"):
-            x = rect.get("x")
-            y = rect.get("y")
-            utm_easting, utm_northing, utm_zone = geo_mapper.pixel2utm(row=y, col=x)
-
-            defects.append({"image": base_name, "utm_easting": utm_easting, "utm_northing": utm_northing,
-                            "utm_zone": utm_zone, "rect": rect})
-
-            # for image_name, value in rect_info.items():
-            #     base_name = os.path.splitext(basename(image_name))[0]
-            #     image_latitude = exif.get(base_name).get("GPSLatitude")
-            #     image_longitude = exif.get(base_name).get("GPSLongitude")
-            #
-            #     for rect in value["rects"]:
-            #         x_small_image = rect.get("x")
-            #         y_small_image = rect.get("y")
-            #
-            #         x_shift_small_image = x_small_image - (value["width"] - 1) / 2
-            #         y_shift_small_image = y_small_image - (value["height"] - 1) / 2
-            #
-            #         x_shift_large_image = x_shift_small_image / pixel_ratio
-            #         y_shift_large_image = y_shift_small_image / pixel_ratio
-            #
-            #         y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
-            #
-            #         x_large_image = x_center_large_image + x_shift_large_image
-            #         y_large_image = y_center_large_image + y_shift_large_image
-            #
-            #         defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
-            #                         "rect": rect})
-
-        #     grouping the defects according to pixel distance on the stitched image
-    pixel_location_table = np.array([[x.get("utm_easting"), x.get("utm_northing")] for x in defects])
-    linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
-
-    ctree = cut_tree(linkage_matrix, height=[group_criteria])
-    cluster = np.array([x[0] for x in ctree])
-    cluster_centroids = list()
-    for i in range(max(cluster) + 1):
-        x_center = np.mean(pixel_location_table[cluster == i, 0])
-        y_center = np.mean(pixel_location_table[cluster == i, 1])
-        cluster_centroids.append([x_center, y_center])
-
-    for i in range(len(defects)):
-        defect = defects[i]
-        defect_id_num = cluster[i]
-        defect.update({"defect_id_num": defect_id_num})
-
-    clustered_defects = list()
-    for i in set(cluster):
-        d = dict()
-        d.update({
-            "defectId": "DEF{:05d}".format(i),
-            "utmEasting": cluster_centroids[i][0],
-            "utmNorthing": cluster_centroids[i][1],
-            "category": DefectCategory.UNCONFIRMED,
-            "rects": list()
-        })
-
-        involved_defects = [x for x in defects if x.get("defect_id_num") == i]
-        d.update({"utmZone": involved_defects[0].get("utm_zone")})
-
-        for involved_defect in involved_defects:
-            temp_d = dict()
-            temp_d.update(involved_defect.get("rect"))
-            temp_d.update({"image": involved_defect.get("image")})
-            d.get("rects").append(temp_d)
-        lat, lng = utm.to_latlon(d.get("utmEasting"), d.get("utmNorthing"), d.get("utmZone"), northern=True)
-        d.update({"lat": lat, "lng": lng})
-
-        clustered_defects.append(d)
-
-    with open(join(folder_path, "defects.json"), "w") as f:
-        json.dump(clustered_defects, f)
-
-    return clustered_defects
+# def batch_process_locate(folder_path: str, gsd: float, group_criteria: float) -> List[dict]:
+#     """
+#     this function will read all the labeled defects from /labeled/rect.json and output the gps coordinates of the
+#     defects to a json file folder_path/defects.json. This function also tries to unify those defects that very close
+#     to each other since they might be the same defect.
+#     :param folder_path: this is the folder where the raw images rest
+#     :param gsd: ground sampling distance in meters
+#     :param group_criteria: the distance criteria of grouping the defects, in meters
+#     :return: list of defects profile
+#     """
+#
+#     with open(join(folder_path, "exif.json"), "r") as f:
+#         exif = json.load(f)
+#
+#     with open(join(folder_path, "rect.json"), "r") as f:
+#         rect_info = json.load(f)
+#
+#     defects = list()
+#
+#     for d in rect_info:
+#         base_name = d.get("image")
+#         # image_latitude = exif.get(base_name).get("GPSLatitude")
+#         # image_longitude = exif.get(base_name).get("GPSLongitude")
+#         cursor = next((x for x in exif if x.get("image") == base_name))
+#         image_latitude = cursor.get("GPSLatitude")
+#         image_longitude = cursor.get("GPSLongitude")
+#         image_height = d.get("height")
+#         image_width = d.get("width")
+#
+#         geo_mapper = UTMGeoMapper(gsd=gsd, origin_gps=(image_latitude, image_longitude),
+#                                   origin_pixel=(image_height / 2 - 0.5, image_width / 2 - 0.5))
+#
+#         for rect in d.get("rects"):
+#             x = rect.get("x")
+#             y = rect.get("y")
+#             utm_easting, utm_northing, utm_zone = geo_mapper.pixel2utm(row=y, col=x)
+#
+#             defects.append({"image": base_name, "utm_easting": utm_easting, "utm_northing": utm_northing,
+#                             "utm_zone": utm_zone, "rect": rect})
+#
+#             # for image_name, value in rect_info.items():
+#             #     base_name = os.path.splitext(basename(image_name))[0]
+#             #     image_latitude = exif.get(base_name).get("GPSLatitude")
+#             #     image_longitude = exif.get(base_name).get("GPSLongitude")
+#             #
+#             #     for rect in value["rects"]:
+#             #         x_small_image = rect.get("x")
+#             #         y_small_image = rect.get("y")
+#             #
+#             #         x_shift_small_image = x_small_image - (value["width"] - 1) / 2
+#             #         y_shift_small_image = y_small_image - (value["height"] - 1) / 2
+#             #
+#             #         x_shift_large_image = x_shift_small_image / pixel_ratio
+#             #         y_shift_large_image = y_shift_small_image / pixel_ratio
+#             #
+#             #         y_center_large_image, x_center_large_image = geo_mapper.gps2pixel(image_latitude, image_longitude)
+#             #
+#             #         x_large_image = x_center_large_image + x_shift_large_image
+#             #         y_large_image = y_center_large_image + y_shift_large_image
+#             #
+#             #         defects.append({"image": base_name, "x_large_image": x_large_image, "y_large_image": y_large_image,
+#             #                         "rect": rect})
+#
+#         #     grouping the defects according to pixel distance on the stitched image
+#     pixel_location_table = np.array([[x.get("utm_easting"), x.get("utm_northing")] for x in defects])
+#     linkage_matrix = linkage(pixel_location_table, method='single', metric='chebyshev')
+#
+#     ctree = cut_tree(linkage_matrix, height=[group_criteria])
+#     cluster = np.array([x[0] for x in ctree])
+#     cluster_centroids = list()
+#     for i in range(max(cluster) + 1):
+#         x_center = np.mean(pixel_location_table[cluster == i, 0])
+#         y_center = np.mean(pixel_location_table[cluster == i, 1])
+#         cluster_centroids.append([x_center, y_center])
+#
+#     for i in range(len(defects)):
+#         defect = defects[i]
+#         defect_id_num = cluster[i]
+#         defect.update({"defect_id_num": defect_id_num})
+#
+#     clustered_defects = list()
+#     for i in set(cluster):
+#         d = dict()
+#         d.update({
+#             "defectId": "DEF{:05d}".format(i),
+#             "utmEasting": cluster_centroids[i][0],
+#             "utmNorthing": cluster_centroids[i][1],
+#             "category": DefectCategory.UNCONFIRMED,
+#             "rects": list()
+#         })
+#
+#         involved_defects = [x for x in defects if x.get("defect_id_num") == i]
+#         d.update({"utmZone": involved_defects[0].get("utm_zone")})
+#
+#         for involved_defect in involved_defects:
+#             temp_d = dict()
+#             temp_d.update(involved_defect.get("rect"))
+#             temp_d.update({"image": involved_defect.get("image")})
+#             d.get("rects").append(temp_d)
+#         lat, lng = utm.to_latlon(d.get("utmEasting"), d.get("utmNorthing"), d.get("utmZone"), northern=True)
+#         d.update({"lat": lat, "lng": lng})
+#
+#         clustered_defects.append(d)
+#
+#     with open(join(folder_path, "defects.json"), "w") as f:
+#         json.dump(clustered_defects, f)
+#
+#     return clustered_defects
 
 
 if __name__ == '__main__':
