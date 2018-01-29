@@ -6,19 +6,24 @@ from typing import Optional
 from wand.image import Image
 from geo_mapper import GeoMapper, TifGeoMapper
 import os
+import cv2
+import numpy as np
 
 
 class TileGenerator:
 
-    def __init__(self, tile_size: float, resolution: Optional[int] = None, overlap: float = 0.5):
+    def __init__(self, n_row: int, resolution: Optional[int] = None, overlap: float = 0.5):
         """
         constructor
-        :param tile_size: size of the area each tile covers, in meters
-        :param resolution: resolution of each tile, if it is None, resolution will remain the same with the source image
+        :param n_row: raw tif will be cut to hwo many rows, number of columns will be determined acoordingly
+        :param resolution: resolution of each tile, if it is None, resolution will be 200X200
         :param overlap: overlap between adjacent tiles, in meters
         """
-        self._tile_size = tile_size
-        self._resolution = resolution
+        self._n_row = n_row
+        if resolution is None:
+            self._resolution = 200
+        else:
+            self._resolution = resolution
         self._overlap = overlap
 
     def process(self, image_path: str, mapper: Optional[GeoMapper] = None, output_folder: str = "."):
@@ -28,56 +33,58 @@ class TileGenerator:
         :param mapper: a geo mapper of the image. If can be None if the image is a GeoTiff
         :param output_folder: path of the folder to save the results
         """
-        image = Image(filename=image_path)
+        # image = Image(filename=image_path)
+
+        if not os.path.isdir(output_folder):
+            os.mkdir(output_folder)
+
+        if not os.path.isdir(os.path.join(output_folder, "tiles")):
+            os.mkdir(os.path.join(output_folder, "tiles"))
+
+        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
         if mapper is None:
             mapper = TifGeoMapper(image_path)
 
-        gsd = mapper.gsd
+        image_height, image_width, _ = image.shape
 
-        tile_size_in_pixel = int(self._tile_size/gsd)
-        overlap_in_pixel = int(self._overlap/gsd)
+        n_rows = self._n_row
+        n_cols = int(n_rows / image_height * image_width)
 
-        top_left_pixels = [(row, col)
-                           for row in range(0, image.height, tile_size_in_pixel)
-                           for col in range(0, image.width, tile_size_in_pixel)]
+        corners_gps = [mapper.pixel2gps(*x)
+                       for x in ((0, 0), (0, image_width-1), (image_height-1, 0), (image_height-1, image_width-1))]
 
-        i = 0
+        lat_range = (max(corners_gps[x][0] for x in [2, 3]), min(corners_gps[x][0] for x in [0, 1]))
+        lng_range = (max(corners_gps[x][1] for x in [0, 2]), min(corners_gps[x][1] for x in [1, 3]))
+
+        lats = np.linspace(lat_range[0], lat_range[1], num=n_rows+1)
+        lngs = np.linspace(lng_range[0], lng_range[1], num=n_cols+1)
+
         coordinates = list()
-        for top_left_pixel in top_left_pixels:
-            top = top_left_pixel[0]
-            left = top_left_pixel[1]
-            btm = top + tile_size_in_pixel + overlap_in_pixel
-            right = left + tile_size_in_pixel + overlap_in_pixel
+        for i in range(len(lats)-1):
+            lat1, lat2 = lats[i], lats[i+1]
 
-            if btm > image.height:
-                btm = image.height
+            for j in range(len(lngs)-1):
+                lng1, lng2 = lngs[j], lngs[j+1]
 
-            if right > image.width:
-                right = image.width
+                top_left = mapper.gps2pixel(lat2, lng1)
+                top_right = mapper.gps2pixel(lat2, lng2)
+                btm_left = mapper.gps2pixel(lat1, lng1)
+                btm_right = mapper.gps2pixel(lat1, lng2)
 
-            if not os.path.isdir(output_folder):
-                os.mkdir(output_folder)
+                pts1 = np.float32([x[::-1] for x in [top_left, top_right, btm_left, btm_right]])
+                pts2 = np.float32([x[::-1] for x in [[0, 0], [0, self._resolution-1], [self._resolution-1, 0],
+                                   [self._resolution-1, self._resolution-1]]])
+                affine_m = cv2.getPerspectiveTransform(pts1, pts2)
+                dst = cv2.warpPerspective(image, affine_m, (self._resolution, self._resolution))
 
-            if not os.path.isdir(os.path.join(output_folder, "tiles")):
-                os.mkdir(os.path.join(output_folder, "tiles"))
+                cv2.imwrite(os.path.join(output_folder, "tiles", "{}_{}.png".format(i, j)), dst)
 
-            with image[left: right, top: btm] as sub_image:
-                if self._resolution is not None:
-                    sub_image.resize(self._resolution, self._resolution)
-
-                sub_image.save(filename=os.path.join(output_folder, "tiles", "{}.png".format(i)))
-
-            top_left_gps = mapper.pixel2gps(row=top, col=left)
-            btm_right_gps = mapper.pixel2gps(row=btm, col=right)
-
-            coordinate = {
-                "name": "{}.png".format(i),
-                "p1": {"lat": top_left_gps[0], "lng": top_left_gps[1]},
-                "p2": {"lat": btm_right_gps[0], "lng": btm_right_gps[1]}}
-            coordinates.append(coordinate)
-
-            i += 1
+                coordinate = {
+                    "name": "{}_{}.png".format(i, j).format(i),
+                    "p1": {"lat": lat1, "lng": lng1},
+                    "p2": {"lat": lat2, "lng": lng2}}
+                coordinates.append(coordinate)
 
         with open(os.path.join(output_folder, "position.json"), "w") as f:
             json.dump(coordinates, f)
@@ -87,22 +94,17 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="get tiles from panorama")
-    parser.add_argument("--tile-size", type=float, help="size of the area each tile covers, in meters", default=30.0)
-    parser.add_argument("--tile-resolution", type=int, help="resolution for each tile", default=None)
+    parser.add_argument("--n-row", type=int, help="how many rows of tiles", default=10)
+    parser.add_argument("--tile-resolution", type=int, help="resolution for each tile", default=200)
     parser.add_argument("--overlap", type=float, help="overlap between two tiles, in meters", default=0.5)
     parser.add_argument("--output-folder", type=str, help="folder to save the result", default=".")
     parser.add_argument("image_path", type=str, help="path of the panorama image")
 
     args = parser.parse_args()
 
-    generator = TileGenerator(tile_size=args.tile_size, resolution=args.tile_resolution, overlap=args.overlap)
+    generator = TileGenerator(n_row=args.n_row, resolution=args.tile_resolution)
     generator.process(image_path=args.image_path, output_folder=args.output_folder)
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
