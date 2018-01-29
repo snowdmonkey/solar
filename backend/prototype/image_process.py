@@ -5,8 +5,8 @@ from os.path import join
 from typing import Optional
 from pymongo import MongoClient
 # from geo_mapper import GeoMapper, TifGeoMapper
-from image_processing_functions import batch_process_exif, batch_process_rotate_n_scale, batch_process_label, \
-    batch_process_locate, batch_process_profile, batch_process_aggregate
+from image_processing_functions import batch_process_exif, batch_process_rotate_n_scale, \
+    batch_process_profile, batch_process_aggregate
 
 
 class ImageProcessPipeline:
