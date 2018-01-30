@@ -794,10 +794,10 @@ def set_panel_group(station: str, group_id: str):
 
 
 @app.route(API_BASE +
-           "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point", methods=["GET"])
+           "/station/<string:station>/date/<string:date>/image/<string:image>/temp/point", methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
-    :return: temperature in celsius degree at a provided point
+    :return: temp in celsius degree at a provided point
     """
     exif = get_exif(station=station, date=date, image=image)
     transformer = TempTransformer(e=exif.get("Emissivity"),
@@ -820,16 +820,16 @@ def get_point_temperature(station: str, date: str, image: str):
     row = int(row_ratio * n_row)
     col = int(col_ratio * n_col)
 
-    result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
+    result = {"temp": round(transformer.raw2temp(raw[row, col]), 1)}
 
     return jsonify(result)
 
 
 @app.route(API_BASE +
-           "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range", methods=["GET"])
+           "/station/<string:station>/date/<string:date>/image/<string:image>/temp/range", methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """
-    :return: the temperature profile in an rectangle area of the image
+    :return: the temp profile in an rectangle area of the image
     """
     top = int(request.args.get("top"))
     btm = int(request.args.get("btm"))

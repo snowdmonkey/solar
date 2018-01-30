@@ -21,7 +21,7 @@ tags:
   - name: images
     description: all about images
   - name: temperature
-    description: all about Celsius temperature of an IR image
+    description: all about Celsius temp of an IR image
 schemes:
   - http
 paths:
@@ -539,8 +539,8 @@ paths:
     get:
       tags:
         - temperature
-      summary: get temperature at a pixel
-      description: get celsius temperature at a given pixel on an IR image
+      summary: get temp at a pixel
+      description: get celsius temp at a given pixel on an IR image
       parameters:
         - name: stationId
           type: string
@@ -580,8 +580,8 @@ paths:
     get:
       tags:
         - temperature
-      summary: get temperature in a range
-      description: get statistics of Celsius temperature in a rectangle area on an IR image
+      summary: get temp in a range
+      description: get statistics of Celsius temp in a rectangle area on an IR image
       parameters:
         - name: stationId
           type: string
@@ -638,7 +638,7 @@ paths:
                 type: number
               maxPos:
                 type: object
-                description: pixel pisition of the maximun temperature
+                description: pixel pisition of the maximun temp
                 properties:
                   col:
                     type: integer
@@ -646,7 +646,7 @@ paths:
                     type: integer
               minPos:
                 type: object
-                description: pixel pisition of the minimum temperature
+                description: pixel pisition of the minimum temp
                 properties:
                   col:
                     type: integer

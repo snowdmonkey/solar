@@ -1,18 +1,18 @@
 from flask import Blueprint, request, jsonify
-from ..misc import API_BASE, get_exif, get_image_root
+from spi_app.misc import API_BASE, get_exif, get_image_root
 from os.path import join
 from temperature import TempTransformer
 import cv2
 
-temperature_br = Blueprint("temperature", __name__)
+temperature_br = Blueprint("temp", __name__)
 
 
 @temperature_br.route(API_BASE +
-                      "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point",
+                      "/station/<string:station>/date/<string:date>/image/<string:image>/temp/point",
                       methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
-    :return: temperature in celsius degree at a provided point
+    :return: temp in celsius degree at a provided point
     """
     exif = get_exif(station=station, date=date, image=image)
     transformer = TempTransformer(e=exif.get("Emissivity"),
@@ -35,17 +35,17 @@ def get_point_temperature(station: str, date: str, image: str):
     row = int(row_ratio * n_row)
     col = int(col_ratio * n_col)
 
-    result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
+    result = {"temp": round(transformer.raw2temp(raw[row, col]), 1)}
 
     return jsonify(result)
 
 
 @temperature_br.route(API_BASE +
-                      "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range",
+                      "/station/<string:station>/date/<string:date>/image/<string:image>/temp/range",
                       methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """
-    :return: the temperature profile in an rectangle area of the image
+    :return: the temp profile in an rectangle area of the image
     """
     top = int(request.args.get("top"))
     btm = int(request.args.get("btm"))

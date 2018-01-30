@@ -23,7 +23,7 @@ from extract_rect import rotate_and_scale, PanelCropper
 from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
 from semantic import FcnIRProfiler, ThIRProfiler
-from misc import get_gsd
+from protomisc import get_gsd
 # plt.switch_backend("agg")
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ def batch_process_rotate_n_scale(folder_path: str, exif_path: Union[None, str] =
         file_name = d.get("FileName")
         image_path = join(folder_path, file_name)
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        raw_flag = False # indicating whether raw temperature is available
+        raw_flag = False # indicating whether raw temp is available
         if d.get("RawThermalImage") is not None:
             raw_flag = True
         if raw_flag is True:

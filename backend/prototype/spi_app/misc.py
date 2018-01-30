@@ -1,6 +1,6 @@
 import os
 import shutil
-from .database import get_mongo_client
+from spi_app.database import get_mongo_client
 from pymongo import collection
 from typing import Union
 from os.path import join

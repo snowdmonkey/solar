@@ -9,9 +9,9 @@ class TempTransformer:
         the class aim to transfer the raw sensor data in flir infrared image to celsius degree
         :param e: Emissivity, should be ~0.95 to 0.97, defaults to 1
         :param od: object distance in meters
-        :param rtemp: apparent reflected temperature
-        :param atemp: atmospheric temperature for transmission loss, defaults to rtemp
-        :param irwtemp: infrared window temperature, defaults to rtemp
+        :param rtemp: apparent reflected temp
+        :param atemp: atmospheric temp for transmission loss, defaults to rtemp
+        :param irwtemp: infrared window temp, defaults to rtemp
         :param irt: infrared window transmission, defaults to 1, should be ~0.95 to 0.96
         :param rh: relative humidity in percentage, defaults to 50%
         :param pr1: planck R1 calibration constant

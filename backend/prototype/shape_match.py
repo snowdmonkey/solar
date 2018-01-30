@@ -7,7 +7,7 @@ from shapely.geometry import box
 from typing import NamedTuple
 from shapely.affinity import translate, scale, rotate, affine_transform, interpret_origin
 from scipy.optimize import minimize
-from misc import UTM
+from protomisc import UTM
 import numpy as np
 import logging
 

@@ -2,8 +2,12 @@ import torch
 from torch.autograd import Variable
 import logging
 import os
-from . import app, db
-from .auth.models import User
+from spi_app import create_app
+from spi_app.database import db
+from spi_app.auth.models import User
+
+
+app = create_app()
 
 
 def add_user():
@@ -20,6 +24,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         handlers=[logging.FileHandler("log"), logging.StreamHandler()])
     if not os.path.exists('sqlite/db.sqlite'):
-        db.create_all()
-        add_user()
+        with app.app_context():
+            db.create_all()
+            add_user()
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
