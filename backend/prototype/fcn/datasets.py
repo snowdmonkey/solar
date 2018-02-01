@@ -11,7 +11,8 @@ import torch
 class FCNDataset(Dataset):
 
     # def __init__(self, feature_folder: str, label_folder: str):
-    def __init__(self, *args: Tuple[Path, Path], color_map: Dict[Tuple[int, int, int], int], gray_scale: bool):
+    def __init__(self, *args: Tuple[Path, Path], color_map: Dict[Tuple[int, int, int], int], gray_scale: bool,
+                 transform=None):
         """
         constructor
         :param args: tuples of (feature folder, annotation folder)
@@ -29,6 +30,7 @@ class FCNDataset(Dataset):
         self._logger = logging.getLogger(__name__)
         self._color_map = color_map
         self._gray_scale = gray_scale
+        self._transform = transform
         self._logger.info("{} feature images included".format(len(self._path_pairs)))
 
     @property
@@ -60,7 +62,12 @@ class FCNDataset(Dataset):
         for k, v in self._color_map.items():
             label[(label_img[:, :, 0] == k[2]) & (label_img[:, :, 1] == k[1]) & (label_img[:, :, 0] == k[0])] = v
 
-        return {"feature": feature_img, "label": label}
+        sample = {"feature": feature_img, "label": label}
+
+        if self._transform is not None:
+            sample = self._transform(sample)
+
+        return sample
 
 
 class RandomScale:

@@ -1,6 +1,7 @@
 from pathlib import Path
-from fcn.datasets import FCNDataset
+from fcn.datasets import FCNDataset, RandomScale, ToTensor
 from fcn.train import FCNTrainer
+from torchvision import transforms
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -18,7 +19,8 @@ label_folders = [Path(x) for x in ["./2017-06-20/annotation",
 
 
 color_map = {(0, 0, 0): 0, (0, 255, 0): 1, (255, 0, 0): 1}
-dataset = FCNDataset(*zip(feature_folders, label_folders), color_map=color_map, gray_scale=True)
+dataset = FCNDataset(*zip(feature_folders, label_folders), color_map=color_map, gray_scale=True,
+                     transform=transforms.Compose([RandomScale(), ToTensor()]))
 
 trainer = FCNTrainer(n_classes=2, n_channels=1)
 trainer.train(dataset=dataset, n_epochs=0, train_proportion=0.8)
