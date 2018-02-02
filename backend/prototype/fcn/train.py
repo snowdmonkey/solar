@@ -187,8 +187,8 @@ class FCNTrainer:
                 #
                 cv2.imwrite(os.path.join(pred_folder, "pred{}.png".format(i)), raw)
 
-        if eval is False:
-            self._scheduler.step()
+        # if eval is False:
+        #     self._scheduler.step()
 
         train_size = len(data_loader)
         return train_loss/train_size, train_acc/train_size, train_iou/train_size
@@ -221,6 +221,7 @@ class FCNTrainer:
             self._writer.add_scalar("data/acc/test", acc, epoch)
             self._writer.add_scalar("data/iou/test", iou, epoch)
 
+            self._scheduler.step()
             self._save()
 
 

@@ -27,4 +27,4 @@ dataset = FCNDataset(*zip(feature_folders, label_folders), color_map=color_map, 
 
 trainer = FCNTrainer(n_classes=2, n_channels=1)
 trainer.set_dataset(dataset, 0.8)
-trainer.train(n_epochs=0)
+trainer.train(n_epochs=100)
