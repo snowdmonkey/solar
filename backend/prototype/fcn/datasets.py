@@ -110,5 +110,5 @@ class ToTensor:
 
         feature = (feature - 127.5) / 127.5
 
-        return {"feature": torch.from_numpy(feature),
-                "label": torch.from_numpy(label)}
+        return {"feature": torch.from_numpy(feature).float(),
+                "label": torch.from_numpy(label).long()}
