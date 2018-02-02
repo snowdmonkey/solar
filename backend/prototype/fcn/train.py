@@ -81,8 +81,8 @@ class FCNTrainer:
         self._net = fc_dense_net57(n_classes=n_classes, channels=n_channels)
 
         self._criterion = torch.nn.NLLLoss2d()
-        # self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
-        self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001)
+        self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.001)
+        # self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001)
         self._scheduler = StepLR(self._optimizer, step_size=1, gamma=0.995)
 
         if torch.cuda.device_count() == 1:
@@ -194,7 +194,8 @@ class FCNTrainer:
         return train_loss/train_size, train_acc/train_size, train_iou/train_size
 
     def _save(self):
-        torch.save(self._net, "model.pt")
+        self._net.eval()
+        torch.save(self._net.state_dict(), "model.pt")
 
     def train(self, n_epochs: int):
         """
