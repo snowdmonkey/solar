@@ -11,6 +11,7 @@ from typing import Tuple, List
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch.optim.lr_scheduler import StepLR
 from fcn.nets import fc_dense_net57
 from .datasets import FCNDataset
 from tensorboardX import SummaryWriter
@@ -32,7 +33,7 @@ def get_prediction(output: torch.FloatTensor) -> torch.LongTensor:
 def get_iou(pred: torch.LongTensor, label: torch.LongTensor, index: int) -> float:
     """
     compute the IoU over an index
-    :param output: predicted tensor
+    :param pred: predicted tensor
     :param label: label tensor
     :param index: index of interest
     :return: IoU
@@ -80,7 +81,9 @@ class FCNTrainer:
         self._net = fc_dense_net57(n_classes=n_classes, channels=n_channels)
 
         self._criterion = torch.nn.NLLLoss2d()
-        self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
+        # self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
+        self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001)
+        self._scheduler = StepLR(self._optimizer, step_size=1, gamma=0.995)
 
         if torch.cuda.device_count() == 1:
             self._net.cuda()
@@ -173,9 +176,9 @@ class FCNTrainer:
                 raw = raw[0]
                 raw = cv2.cvtColor(raw, cv2.COLOR_GRAY2BGR)
 
-                label_np = label.data.cpu().numpy()*100
-                label_np = label_np.astype(np.uint8)[0]
-                cv2.imwrite(os.path.join(pred_folder, "label{}.png".format(i)), label_np)
+                # label_np = label.data.cpu().numpy()*100
+                # label_np = label_np.astype(np.uint8)[0]
+                # cv2.imwrite(os.path.join(pred_folder, "label{}.png".format(i)), label_np)
 
                 pred_np = pred.cpu().numpy()[0]
                 overlay = raw.copy()
@@ -183,6 +186,9 @@ class FCNTrainer:
                 raw = cv2.addWeighted(raw, 0.7, overlay, 0.3, 0)
                 #
                 cv2.imwrite(os.path.join(pred_folder, "pred{}.png".format(i)), raw)
+
+        if eval is False:
+            self._scheduler.step()
 
         train_size = len(data_loader)
         return train_loss/train_size, train_acc/train_size, train_iou/train_size

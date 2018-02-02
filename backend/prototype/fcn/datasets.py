@@ -23,7 +23,7 @@ class FCNDataset(Dataset):
         for arg in args:
             feature_folder, label_folder = arg
             for feature_path in feature_folder.glob("*.jpg"):
-                label_path = label_folder / feature_path.name
+                label_path = label_folder / feature_path.name.replace(".jpg", ".png")
                 if label_path.exists():
                     self._path_pairs.append((feature_path, label_path))
 
