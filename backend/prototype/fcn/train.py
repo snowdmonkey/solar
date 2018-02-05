@@ -81,7 +81,7 @@ class FCNTrainer:
         self._net = fc_dense_net57(n_classes=n_classes, channels=n_channels)
 
         self._criterion = torch.nn.NLLLoss2d()
-        self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.001)
+        self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
         # self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001)
         self._scheduler = StepLR(self._optimizer, step_size=1, gamma=0.995)
 
