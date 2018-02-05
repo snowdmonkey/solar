@@ -176,6 +176,7 @@ class FCNTrainer:
                 raw = raw[0]
                 raw = cv2.cvtColor(raw, cv2.COLOR_GRAY2BGR)
 
+                raw1 = raw.copy()
                 # label_np = label.data.cpu().numpy()*100
                 # label_np = label_np.astype(np.uint8)[0]
                 # cv2.imwrite(os.path.join(pred_folder, "label{}.png".format(i)), label_np)
@@ -187,15 +188,30 @@ class FCNTrainer:
                 #
                 cv2.imwrite(os.path.join(pred_folder, "pred{}.png".format(i)), raw)
 
+                anno_folder = "./data/anno"
+                if not os.path.exists(anno_folder):
+                    os.makedirs(anno_folder)
+
+                anno_np = label.cpu().numpy()[0]
+                overlay = raw1.copy()
+                overlay[anno_np == 1] = (0, 255, 0)
+                raw1 = cv2.addWeighted(raw1, 0.7, overlay, 0.3, 0)
+                #
+                cv2.imwrite(os.path.join(anno_folder, "anno{}.png".format(i)), raw1)
+
         # if eval is False:
         #     self._scheduler.step()
 
         train_size = len(data_loader)
         return train_loss/train_size, train_acc/train_size, train_iou/train_size
 
-    def _save(self):
+    def _save(self, prefix: str):
+        save_folder = "./model"
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
         self._net.eval()
-        torch.save(self._net.state_dict(), "model.pt")
+        # torch.save(self._net.state_dict(), prefix+"model.pt")
+        torch.save(self._net.state_dict(), os.path.join(save_folder, "{}-model.pt".format(prefix)))
 
     def train(self, n_epochs: int):
         """
@@ -223,7 +239,7 @@ class FCNTrainer:
             self._writer.add_scalar("data/iou/test", iou, epoch)
 
             self._scheduler.step()
-            self._save()
+            self._save(prefix=str(epoch))
 
 
 def main():

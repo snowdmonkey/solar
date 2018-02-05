@@ -93,6 +93,43 @@ class RandomScale:
         return {"feature": feature, "label": label}
 
 
+class RandomCrop:
+    """
+    random crop the image for training
+    """
+    def __init__(self, height: int, width: int):
+        """
+        constructor
+        :param height: height of the cropped image
+        :param width: width of the cropped image
+        """
+        self._height = height
+        self._width = width
+
+    def __call__(self, sample: Dict[str, np.ndarray]):
+        feature, label = sample["feature"], sample["label"]
+        raw_height, raw_width = feature.shape[0], feature.shape[1]
+        if self._height > raw_height:
+            pad_top = (self._height - raw_height) // 2
+            pad_btm = self._height - raw_height - pad_top
+            feature = cv2.copyMakeBorder(feature, pad_top, pad_btm, 0, 0, borderType=cv2.BORDER_DEFAULT)
+            label = cv2.copyMakeBorder(label, pad_top, pad_btm, 0, 0, borderType=cv2.BORDER_DEFAULT)
+
+        if self._width > raw_width:
+            pad_left = (self._width - raw_width) // 2
+            pad_right = self._width - raw_width - pad_left
+            feature = cv2.copyMakeBorder(feature, 0, 0, pad_left, pad_right, borderType=cv2.BORDER_DEFAULT)
+            label = cv2.copyMakeBorder(label, 0, 0, pad_left, pad_right, borderType=cv2.BORDER_DEFAULT)
+
+        top_index = random.choice(range(feature.shape[0]-self._height))
+        left_index = random.choice(range(feature.shape[0]-self._width))
+
+        feature = feature[top_index:(top_index+self._height), left_index:(left_index+self._width)]
+        label = label[top_index:(top_index + self._height), left_index:(left_index + self._width)]
+
+        return {"feature": feature, "label": label}
+
+
 class ToTensor:
     """
     convert ndarrays to Tensors
