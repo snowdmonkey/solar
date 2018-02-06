@@ -16,7 +16,7 @@ def main():
     files = image_folder.glob("*.jpg")
     model = fc_dense_net57(n_classes=2, channels=1)
 
-    weight_path = r"Z:\label\model.pt"
+    weight_path = r"Z:\label\model\173-model.pt"
     # model = torch.load(weight_path, map_location=lambda storage, loc: storage)
     state = torch.load(weight_path, map_location=lambda storage, loc: storage)
 

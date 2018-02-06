@@ -60,7 +60,7 @@ class FCNDataset(Dataset):
         label = np.zeros(shape=label_img.shape[:2], dtype=np.long)
 
         for k, v in self._color_map.items():
-            label[(label_img[:, :, 0] == k[2]) & (label_img[:, :, 1] == k[1]) & (label_img[:, :, 0] == k[0])] = v
+            label[(label_img[:, :, 0] == k[2]) & (label_img[:, :, 1] == k[1]) & (label_img[:, :, 2] == k[0])] = v
 
         sample = {"feature": feature_img, "label": label}
 
@@ -121,8 +121,8 @@ class RandomCrop:
             feature = cv2.copyMakeBorder(feature, 0, 0, pad_left, pad_right, borderType=cv2.BORDER_DEFAULT)
             label = cv2.copyMakeBorder(label, 0, 0, pad_left, pad_right, borderType=cv2.BORDER_DEFAULT)
 
-        top_index = random.choice(range(feature.shape[0]-self._height))
-        left_index = random.choice(range(feature.shape[0]-self._width))
+        top_index = random.choice(range(feature.shape[0]-self._height+1))
+        left_index = random.choice(range(feature.shape[1]-self._width+1))
 
         feature = feature[top_index:(top_index+self._height), left_index:(left_index+self._width)]
         label = label[top_index:(top_index + self._height), left_index:(left_index + self._width)]

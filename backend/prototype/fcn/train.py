@@ -81,8 +81,8 @@ class FCNTrainer:
         self._net = fc_dense_net57(n_classes=n_classes, channels=n_channels)
 
         self._criterion = torch.nn.NLLLoss2d()
-        self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
-        # self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001)
+        # self._optimizer = torch.optim.SGD(self._net.parameters(), lr=0.01)
+        self._optimizer = torch.optim.RMSprop(self._net.parameters(), lr=0.001, weight_decay=1e-4)
         self._scheduler = StepLR(self._optimizer, step_size=1, gamma=0.995)
 
         if torch.cuda.device_count() == 1:
@@ -98,7 +98,7 @@ class FCNTrainer:
         self._train_loader = None
         self._test_loader = None
 
-    def set_dataset(self, dataset: FCNDataset, train_proportion: float):
+    def set_dataset(self, dataset: FCNDataset, train_proportion: float, batch_size: int):
 
         if dataset.n_channels != self._n_channels:
             raise ValueError("n channels mismatch")
@@ -113,13 +113,13 @@ class FCNTrainer:
         train_sampler = SubsetRandomSampler(indices=train_indices)
         test_sampler = SubsetRandomSampler(indices=test_indices)
 
-        if torch.cuda.device_count() < 2:
-            batch_size = 1
-        else:
-            batch_size = torch.cuda.device_count()
+        # if torch.cuda.device_count() < 2:
+        #     batch_size = 1
+        # else:
+        #     batch_size = torch.cuda.device_count()
 
-        self._train_loader = DataLoader(dataset, batch_size=1, shuffle=False, sampler=train_sampler)
-        self._test_loader = DataLoader(dataset, batch_size=1, shuffle=False, sampler=test_sampler)
+        self._train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, sampler=train_sampler)
+        self._test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, sampler=test_sampler)
 
     def _train(self, eval: bool) -> Tuple[float, float, float]:
         """
@@ -192,7 +192,7 @@ class FCNTrainer:
                 if not os.path.exists(anno_folder):
                     os.makedirs(anno_folder)
 
-                anno_np = label.cpu().numpy()[0]
+                anno_np = label.data.cpu().numpy()[0]
                 overlay = raw1.copy()
                 overlay[anno_np == 1] = (0, 255, 0)
                 raw1 = cv2.addWeighted(raw1, 0.7, overlay, 0.3, 0)
@@ -228,15 +228,15 @@ class FCNTrainer:
 
             loss, acc, iou = self._train(eval=False)
             self._logger.info("epoch: {}; train loss: {}; train acc: {}; train iou: {}".format(epoch, loss, acc, iou))
-            self._writer.add_scalar("data/loss/train", loss, epoch)
-            self._writer.add_scalar("data/acc/train", acc, epoch)
-            self._writer.add_scalar("data/iou/train", iou, epoch)
+            self._writer.add_scalar("loss/train", loss, epoch)
+            self._writer.add_scalar("acc/train", acc, epoch)
+            self._writer.add_scalar("iou/train", iou, epoch)
 
             loss, acc, iou = self._train(eval=True)
             self._logger.info("epoch: {};  test loss: {};  test acc: {};  test iou: {}".format(epoch, loss, acc, iou))
-            self._writer.add_scalar("data/loss/test", loss, epoch)
-            self._writer.add_scalar("data/acc/test", acc, epoch)
-            self._writer.add_scalar("data/iou/test", iou, epoch)
+            self._writer.add_scalar("loss/test", loss, epoch)
+            self._writer.add_scalar("acc/test", acc, epoch)
+            self._writer.add_scalar("iou/test", iou, epoch)
 
             self._scheduler.step()
             self._save(prefix=str(epoch))
