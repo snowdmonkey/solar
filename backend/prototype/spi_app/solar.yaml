@@ -425,6 +425,10 @@ paths:
                   type: number
                 url:
                   type: string
+                width:
+                  type: number
+                height:
+                  type: number
   '/api/v1/station/{stationId}/date/{date}/defect/{defectId}/images/visual':
     get:
       tags:
