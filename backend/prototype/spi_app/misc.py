@@ -41,6 +41,10 @@ def get_log_collection() -> collection:
     return get_mongo_client().get_database("solar").get_collection("log")
 
 
+def get_rect_collection() -> collection:
+    return get_mongo_client().get_database("solar").get_collection("rect")
+
+
 def get_exif(station: str, date: str, image: str) -> Union[dict, None]:
 
     exif = get_mongo_client().solar.exif.find_one({"station": station, "date": date, "image": image}, {"_id": 0})

@@ -1,6 +1,6 @@
 from flask import Blueprint, abort, jsonify, send_file, request
 from ..misc import API_BASE, get_defect_collection, get_exif, get_rotated_folder, get_visual_folder, check_dir, \
-    allowed_file, UPLOAD_FOLDER
+    allowed_file, UPLOAD_FOLDER, get_rect_collection
 from os.path import join
 from ..database import get_mongo_client
 from datetime import datetime
@@ -32,6 +32,8 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
                              "summer", "spring", "cool", "hsv", "pink", "hot"):
             abort(400, "unknown color map")
 
+    rect_coll = get_rect_collection()
+
     results = list()
 
     for image_name in image_names:
@@ -41,7 +43,15 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
         image_url = API_BASE + "/station/{}/date/{}/image/ir/{}?defect={}".format(station, date, image_name, defect_id)
         if color_map is not None:
             image_url += "&colorMap={}".format(color_map)
-        results.append({"imageName": image_name, "latitude": lat, "longitude": lng, "url": image_url})
+
+        rect = rect_coll.find_one({"station": station, "date": date, "image": image_name},
+                                  {"_id": 0, "width": 1, "height": 1})
+        results.append({"imageName": image_name,
+                        "latitude": lat,
+                        "longitude": lng,
+                        "url": image_url,
+                        "width": rect.get("width"),
+                        "height": rect.get("height")})
     return jsonify(results)
 
 
