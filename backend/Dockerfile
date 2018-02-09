@@ -10,4 +10,4 @@ RUN mkdir -p /usr/src/app/data
 	
 EXPOSE 5000
 
-CMD [ "python", "app/main.py" ]
+CMD [ "python", "-m", "spi_app"]
