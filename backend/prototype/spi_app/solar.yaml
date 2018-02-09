@@ -466,6 +466,10 @@ paths:
                   type: number
                 url:
                   type: string
+                width:
+                  type: number
+                height:
+                  type: number
   '/api/v1/station/{stationId}/date/{date}/image/ir/{image}':
     get:
       tags:
