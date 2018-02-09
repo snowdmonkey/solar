@@ -11,9 +11,9 @@ def overlay_image(raw: np.ndarray, anno: np.ndarray, alpha: float) -> np.ndarray
     return out
 
 
-image_folder = Path(r"C:\Users\h232559\Documents\projects\uav\label\2017-06-20")
+image_folder = Path(r"C:\Users\h232559\Documents\projects\uav\label\2017-09-19")
 
-label_folder = Path(r"C:\Users\h232559\Documents\projects\uav\label\2017-06-20\Pixel Labeled Images\Panel_HotSpot_Rest")
+label_folder = Path(r"C:\Users\h232559\Documents\projects\uav\label\2017-09-19\label")
 
 anno_folder = image_folder / "annotation"
 overlay_folder = image_folder / "overlay"
@@ -80,6 +80,7 @@ for img_path in image_folder.glob("*.jpg"):
     out = np.zeros(shape=label.shape+(3,), dtype=np.uint8)
     out[panel_group_mask == 255] = (0, 255, 0)
     out[defect_mask == 255] = (0, 0, 255)
+    out[panel_group_mask == 0] = (0, 0, 0)
     cv2.imwrite(str(anno_path), out)
 
     raw = cv2.cvtColor(raw, cv2.COLOR_GRAY2BGR)
