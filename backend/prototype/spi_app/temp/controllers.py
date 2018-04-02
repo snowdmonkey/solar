@@ -35,7 +35,7 @@ def get_point_temperature(station: str, date: str, image: str):
     row = int(row_ratio * n_row)
     col = int(col_ratio * n_col)
 
-    result = {"temp": round(transformer.raw2temp(raw[row, col]), 1)}
+    result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
 
     return jsonify(result)
 
