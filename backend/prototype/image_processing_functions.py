@@ -62,6 +62,7 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
 
     # file_names = [x for x in os.listdir(folder_path) if x.endswith(".jpg")]
     file_names = [x.name for x in Path(folder_path).glob("*.jpg")]
+    file_names.extend([x.name for x in Path(folder_path).glob("*.JPG")])
 
     # cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
     results = list()
