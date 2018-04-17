@@ -24,6 +24,7 @@ from geo_mapper import UTMGeoMapper
 from locate import Station, Positioner, PanelGroup
 from semantic import FcnIRProfiler, ThIRProfiler
 from protomisc import get_gsd
+from pathlib import Path
 # plt.switch_backend("agg")
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,8 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     if outfile_path is None:
         outfile_path = join(folder_path, "exif.json")
 
-    file_names = [x for x in os.listdir(folder_path) if x.endswith(".jpg")]
+    # file_names = [x for x in os.listdir(folder_path) if x.endswith(".jpg")]
+    file_names = [x.name for x in Path(folder_path).glob("*.jpg")]
 
     # cmd = ['exiftool', "-j", "-b", "-c", "%+.10f"]
     results = list()
@@ -85,8 +87,21 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
     for result in results:
         result["GPSLatitude"] = float(result.get("GPSLatitude"))
         result["GPSLongitude"] = float(result.get("GPSLongitude"))
+
         base_name = result.get("FileName").replace(".jpg", "")
         result["image"] = base_name
+
+        maker = result.get("Make")
+        if maker == "DJI":
+            pass
+        elif maker == "UranusHN":
+            result["GimbalYawDegree"] = result.get("MAVYaw")
+            result["GimbalPitchDegree"] = result.get("MAVPitch")
+            result["GimbalRollDegree"] = result.get("MAVRoll")
+            result["RelativeAltitude"] = result.get("MAVRelativeAltitude")
+            result["FocalLength"] = "13 mm"
+        else:
+            raise ValueError("unknown camera maker")
 
     with open(outfile_path, "w") as outfile:
         json.dump(results, outfile)
@@ -531,6 +546,8 @@ def batch_process_aggregate(folder_path: str, group_criteria: float) -> List[dic
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\linuo\2017-09-19\ir"
+    folder_path = r"C:\Users\h232559\Documents\projects\uav\pic\qingyun\dingzhoueast\2018-04-16\ir"
     # batch_process_exif(folder_path)
-    batch_process_aggregate(folder_path, group_criteria=2.0)
+    # batch_process_rotate_n_scale(folder_path, exif_path=os.path.join(folder_path, "exif.json"))
+    batch_process_profile(folder_path=folder_path, gsd=0.05, method="dl")
+    # batch_process_aggregate(folder_path, group_criteria=2.0)
