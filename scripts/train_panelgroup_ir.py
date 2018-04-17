@@ -20,11 +20,11 @@ label_folders = [Path(x) for x in [
     "./2017-08-15/annotation",
     "./2017-09-19/annotation"]]
 
-color_map = {(0, 0, 0): 0, (0, 255, 0): 1, (255, 0, 0): 1}
+color_map = {(0, 0, 0): 0, (0, 255, 0): 1, (255, 0, 0): 2}
 dataset = FCNDataset(*zip(feature_folders, label_folders), color_map=color_map, gray_scale=True,
                      transform=transforms.Compose([RandomScale(), RandomCrop(height=256, width=336), ToTensor()]))
                      # transform=transforms.Compose([ToTensor()]))
 
-trainer = FCNTrainer(n_classes=2, n_channels=1)
+trainer = FCNTrainer(n_classes=3, n_channels=1)
 trainer.set_dataset(dataset, 0.8, batch_size=4)
 trainer.train(n_epochs=300)

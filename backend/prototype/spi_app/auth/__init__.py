@@ -1,10 +1,9 @@
-from .controllers import auth_br
 from flask_httpauth import HTTPBasicAuth
 from .models import User
 from flask import g
 
 auth = HTTPBasicAuth()
-
+from .controllers import auth_br
 
 @auth.verify_password
 def verify_password(username_or_token, password):

@@ -56,13 +56,37 @@ def get_ir_images_by_defect(station: str, date: str, defect_id: str):
 
 
 @image_br.route(API_BASE +
-                "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/ir", methods=["GET"])
+                "/station/<string:station>/date/<string:date>/defect/<string:defect_id>/images/visual", methods=["GET"])
 def get_visual_images_by_defect(station: str, date: str, defect_id: str):
     """
-    return a json string that contains the details of visual images relating to a defect
+    return a json string which contains the details of the images relating to a defect
+    :return: json string
     """
-    # TODO implement how to get a visual image with the same scope of an ir image
-    pass
+    defect_info = get_defect_collection().find_one({"station": station, "date": date, "defectId": defect_id})
+
+    if defect_info is None:
+        abort(404)
+    image_names = {x.get("image") for x in defect_info.get("rects")}
+
+    rect_coll = get_rect_collection()
+
+    results = list()
+
+    for image_name in image_names:
+        exif = get_exif(station=station, date=date, image=image_name)
+        lat = exif.get("GPSLatitude")
+        lng = exif.get("GPSLongitude")
+        image_url = API_BASE + "/station/{}/date/{}/image/visual/{}".format(station, date, image_name)
+
+        rect = rect_coll.find_one({"station": station, "date": date, "image": image_name},
+                                  {"_id": 0, "width": 1, "height": 1})
+        results.append({"imageName": image_name,
+                        "latitude": lat,
+                        "longitude": lng,
+                        "url": image_url,
+                        "width": rect.get("width"),
+                        "height": rect.get("height")})
+    return jsonify(results)
 
 
 @image_br.route(API_BASE + "/station/<string:station>/date/<string:date>/image/ir/<string:image>", methods=["GET"])

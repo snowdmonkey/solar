@@ -466,6 +466,10 @@ paths:
                   type: number
                 url:
                   type: string
+                width:
+                  type: number
+                height:
+                  type: number
   '/api/v1/station/{stationId}/date/{date}/image/ir/{image}':
     get:
       tags:
@@ -539,7 +543,7 @@ paths:
       responses:
         '200':
           description: success
-  '/api/v1/station/{stationId}/date/{date}/image/{image}/temperature/point':
+  '/api/v1/station/{stationId}/date/{date}/image/{image}/temp/point':
     get:
       tags:
         - temperature
@@ -580,7 +584,7 @@ paths:
               temperature:
                 type: number
                 example: 56.1
-  '/api/v1/station/{stationId}/date/{date}/image/{image}/temperature/range':
+  '/api/v1/station/{stationId}/date/{date}/image/{image}/temp/range':
     get:
       tags:
         - temperature

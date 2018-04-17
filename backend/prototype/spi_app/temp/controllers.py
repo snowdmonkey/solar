@@ -8,7 +8,7 @@ temperature_br = Blueprint("temp", __name__)
 
 
 @temperature_br.route(API_BASE +
-                      "/station/<string:station>/date/<string:date>/image/<string:image>/temp/point",
+                      "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/point",
                       methods=["GET"])
 def get_point_temperature(station: str, date: str, image: str):
     """
@@ -35,13 +35,13 @@ def get_point_temperature(station: str, date: str, image: str):
     row = int(row_ratio * n_row)
     col = int(col_ratio * n_col)
 
-    result = {"temp": round(transformer.raw2temp(raw[row, col]), 1)}
+    result = {"temperature": round(transformer.raw2temp(raw[row, col]), 1)}
 
     return jsonify(result)
 
 
 @temperature_br.route(API_BASE +
-                      "/station/<string:station>/date/<string:date>/image/<string:image>/temp/range",
+                      "/station/<string:station>/date/<string:date>/image/<string:image>/temperature/range",
                       methods=["GET"])
 def get_range_temperature(station: str, date: str, image: str):
     """

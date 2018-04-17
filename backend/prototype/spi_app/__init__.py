@@ -1,5 +1,7 @@
 """backend app for solar panel inspection
 """
+import torch
+from torch.autograd import Variable
 from flask import Flask
 from flask_cors import CORS
 from .database import db
