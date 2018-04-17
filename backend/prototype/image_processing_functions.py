@@ -90,6 +90,7 @@ def batch_process_exif(folder_path: str, outfile_path=None) -> List[Dict]:
         result["GPSLongitude"] = float(result.get("GPSLongitude"))
 
         base_name = result.get("FileName").replace(".jpg", "")
+        base_name = result.get("FileName").replace(".JPG", "")
         result["image"] = base_name
 
         maker = result.get("Make")
