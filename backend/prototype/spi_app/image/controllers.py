@@ -102,6 +102,10 @@ def get_labeled_image(station: str, date: str, image: str):
     color_map = request.args.get("colorMap")
 
     img = cv2.imread(join(get_rotated_folder(station, date), image_name), cv2.IMREAD_COLOR)
+    if img is None:
+        img = cv2.imread(join(get_rotated_folder(station, date), base_image_name + ".JPG"), cv2.IMREAD_COLOR)
+    if img is None:
+        abort(404, "fail to locate image {} with extension jpg or JPG".format(base_image_name))
 
     mapping = {
         "autumn": cv2.COLORMAP_AUTUMN,
