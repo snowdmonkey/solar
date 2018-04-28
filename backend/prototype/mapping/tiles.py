@@ -26,12 +26,13 @@ class TileGenerator:
             self._resolution = resolution
         self._overlap = overlap
 
-    def process(self, image_path: str, mapper: Optional[GeoMapper] = None, output_folder: str = "."):
+    def process(self, image_path: str, mapper: Optional[GeoMapper] = None, output_folder: str = ".", prefix: str =""):
         """
         generate tiles for the image at a given path with a a given geo mapper
         :param image_path: the path of the image to process
         :param mapper: a geo mapper of the image. If can be None if the image is a GeoTiff
         :param output_folder: path of the folder to save the results
+        :param prefix: prefix to filenames
         """
         # image = Image(filename=image_path)
 
@@ -78,15 +79,15 @@ class TileGenerator:
                 affine_m = cv2.getPerspectiveTransform(pts1, pts2)
                 dst = cv2.warpPerspective(image, affine_m, (self._resolution, self._resolution))
 
-                cv2.imwrite(os.path.join(output_folder, "tiles", "{}_{}.png".format(i, j)), dst)
+                cv2.imwrite(os.path.join(output_folder, "tiles", "{}{}_{}.png".format(prefix, i, j)), dst)
 
                 coordinate = {
-                    "name": "{}_{}.png".format(i, j).format(i),
+                    "name": "{}{}_{}.png".format(prefix, i, j),
                     "p1": {"lat": lat1, "lng": lng1},
                     "p2": {"lat": lat2, "lng": lng2}}
                 coordinates.append(coordinate)
 
-        with open(os.path.join(output_folder, "position.json"), "w") as f:
+        with open(os.path.join(output_folder, "{}position.json".format(prefix)), "w") as f:
             json.dump(coordinates, f)
 
 
@@ -98,12 +99,13 @@ def main():
     parser.add_argument("--tile-resolution", type=int, help="resolution for each tile", default=200)
     parser.add_argument("--overlap", type=float, help="overlap between two tiles, in meters", default=0.5)
     parser.add_argument("--output-folder", type=str, help="folder to save the result", default=".")
+    parser.add_argument("--prefix", type=str, help="prefix to tile names", default="")
     parser.add_argument("image_path", type=str, help="path of the panorama image")
 
     args = parser.parse_args()
 
     generator = TileGenerator(n_row=args.n_row, resolution=args.tile_resolution)
-    generator.process(image_path=args.image_path, output_folder=args.output_folder)
+    generator.process(image_path=args.image_path, output_folder=args.output_folder, prefix=args.prefix)
 
 
 if __name__ == "__main__":
