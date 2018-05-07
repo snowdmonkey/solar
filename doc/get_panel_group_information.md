@@ -20,7 +20,7 @@ python -m mapping.label_panel_group.py -h
 ```
 to get the usage of the module.
 
-##Example usage on Linux
+## Example usage on Linux
 1. Suppose `PANORAMA_PATH` is the path to the stitch GeoTiff file.
  
     ```bash
