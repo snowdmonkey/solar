@@ -1,0 +1,28 @@
+version: '2'
+services:
+    db:
+        image: mongo:latest
+        volumes:
+            - {path to mongo data directory}:/data/db
+            - {path to mongo conf directory:/data/configdb
+    api:
+        image: solarapi:latest
+        volumes:
+            - {path to inspection directory}:/usr/src/app/data
+            - {path to sqlite directory}:/usr/src/app/spi_app/sqlite
+        environment:
+            - IMG_ROOT=/usr/src/app/data
+            - GSD_IR=0.0375
+            - MONGO_HOST=mongo
+            - BRAND=/spi/{customerid}
+        links:
+            - db:mongo
+    ui:
+        image: solarui:{customerid}
+        volumes:
+            - {path to tiles directory}:/usr/share/nginx/html/spi/{customerid}/assets/tiles
+        ports:
+            - "{port for the customer}:80"
+        links:
+            - api:solarapi
+
