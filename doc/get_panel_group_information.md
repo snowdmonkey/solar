@@ -4,6 +4,7 @@ The Python module to generate tiles is `/backend/prototype/mapping/label_panel_g
 
 To use it, starts from repository root directory
 * On Windows.
+
 ```bash
 set PYTHONPATH=%cd%\backend\prototype
 ```
