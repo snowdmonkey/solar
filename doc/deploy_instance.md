@@ -16,14 +16,14 @@
     在工作目录`$WORKDIR`中进行如下操作:
 
     1. 获取后端代码：
-    ```bash
-    git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
-    ```
+        ```bash
+        git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
+        ```
     2. 获取前端代码
    
-    ```bash
-    git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
-    ```
+        ```bash
+        git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
+        ```
     3. 根据实际替换{}和相关内容，并保存在工作目录中，例如将{customerid}替换为linuo.
         * <a href="/deploy/app_ctl.sh">app_ctl.sh</a>
         * <a href="/deploy/{customerid}.yml">{customerid}.yml</a>
@@ -34,25 +34,25 @@
 4. 构建镜像
     1. spiproxy
     
-    ```bash
-    cd $WORKDIR/web-app/nginx
-    docker build -t spiproxy .
-    ```
+        ```bash
+        cd $WORKDIR/web-app/nginx
+        docker build -t spiproxy .
+        ```
     2. solarapi & solarui:{customerid}
     
-    ```bash
-    cd $WORKDIR
-    ./app_ctl.sh buildall
-    ```
+        ```bash
+        cd $WORKDIR
+        ./app_ctl.sh buildall
+        ```
 
 5. 启动应用
 
     1. 启动spiproxy
-    ```bash
-    docker run --name spiproxy --restart=always -d -p 80:80 -v $NGINXDIR:/etc/nginx/conf.d/brands spiproxy
-    ```
+        ```bash
+        docker run --name spiproxy --restart=always -d -p 80:80 -v $NGINXDIR:/etc/nginx/conf.d/brands spiproxy
+        ```
     2. 启动应用
-    ```bash
-    cd $WORKDIR
-    ./app_ctl.sh start
-    ```
+        ```bash
+        cd $WORKDIR
+        ./app_ctl.sh start
+        ```
