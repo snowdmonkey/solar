@@ -1,13 +1,13 @@
-#Extract panel group GPS information
+# Extract panel group GPS information
 
 The Python module to generate tiles is `/backend/prototype/mapping/label_panel_group.py`
 
 To use it, starts from repository root directory
-* On Windows 
+* On Windows.
 ```bash
 set PYTHONPATH=%cd%\backend\prototype
 ```
-* On Linux 
+* On Linux. 
 ```bash
 export PYTHONPATH=$(pwd)/backend/prototype
 ```
