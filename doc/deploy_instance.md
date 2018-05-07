@@ -16,6 +16,7 @@
     在工作目录`$WORKDIR`中进行如下操作:
 
     1. 获取后端代码：
+    
         ```bash
         git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
         ```
@@ -48,10 +49,12 @@
 5. 启动应用
 
     1. 启动spiproxy
+    
         ```bash
         docker run --name spiproxy --restart=always -d -p 80:80 -v $NGINXDIR:/etc/nginx/conf.d/brands spiproxy
         ```
     2. 启动应用
+    
         ```bash
         cd $WORKDIR
         ./app_ctl.sh start
