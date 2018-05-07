@@ -2,14 +2,14 @@
 
 1. 安装Docker
 
-SPI Portal应用，一下简称应用，可部署在任何支持Docker容器运行环境的服务器或云服务中。本指南以CentOS 7.3操作系统环境为例，说明应用的安装、配置过程。
-在服务器上安装Docker相关内容可参考相关链接：https://www.docker.com/get-docker
+    SPI Portal应用，一下简称应用，可部署在任何支持Docker容器运行环境的服务器或云服务中。本指南以CentOS 7.3操作系统环境为例，说明应用的安装、配置过程。
+    在服务器上安装Docker相关内容可参考相关链接：https://www.docker.com/get-docker
 
 2. 创建目录结构
 
-在服务器文件系统中构建如下目录结构：
+    在服务器文件系统中构建如下目录结构：
 
-![gimp](doc/img/hierachy.png)
+    ![gimp](doc/img/hierachy.png)
 
 3. 更新部署脚本
     
@@ -29,7 +29,7 @@ SPI Portal应用，一下简称应用，可部署在任何支持Docker容器运�
         * <a href="/deploy/{customerid}.yml">{customerid}.yml</a>
         * <a href="/deploy/{customerid}.conf">{customerid}.conf</a>
    
-将替换完成的{customerid}.conf文件移动到$NGINXDIR，即$ROOT/spi/conf/nginx目录中。
+    将替换完成的{customerid}.conf文件移动到$NGINXDIR，即$ROOT/spi/conf/nginx目录中。
 
 4. 构建镜像
     1. spiproxy
