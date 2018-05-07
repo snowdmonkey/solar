@@ -419,7 +419,7 @@ def main():
         out_dir = args.out_dir
         # labeler = ColorBasedLabeler()
         result = labeler.label(image_path)
-        result.dump_svg(os.path.join(out_dir, "panelgroup.svg"))
+        result.dump_svg(os.path.join(out_dir, "panelgroup_auto.svg"))
     elif args.sub_command == "fromsvg":
         svg_path = args.svg_file
         tif_path = args.tif_file
