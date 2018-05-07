@@ -17,7 +17,7 @@ To use it, starts from repository root directory
 You can type
  
 ```bash
-python -m mapping.label_panel_group.py -h
+python -m mapping.label_panel_group -h
 ```
 to get the usage of the module.
 
