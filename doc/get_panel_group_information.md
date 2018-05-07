@@ -48,7 +48,7 @@ to get the usage of the module.
 6. from folder `output`
 
     ```bash
-    python -m mapping.label_panel_group fromsvg gimp_manual.svg 
+    python -m mapping.label_panel_group fromsvg panelgroup_manual.svg 
     ```
     File `output/groupPanel.json` is created, copy it to `$(ROOT)/spi/$(CUSTOMER_ID)/inspection/$(STATION_ID)/groupPanel.json`.
 
