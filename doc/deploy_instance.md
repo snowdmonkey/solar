@@ -12,23 +12,22 @@ SPI Portal应用，一下简称应用，可部署在任何支持Docker容器运�
 ![gimp](doc/img/hierachy.png)
 
 3. 更新部署脚本
-
-在工作目录`$WORKDIR`中进行如下操作: 
     
+    在工作目录`$WORKDIR`中进行如下操作:
+
     1. 获取后端代码：
+    ```bash
+    git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
+    ```
+    2. 获取前端代码
    
     ```bash
     git clone http://hcelab.honeywell.com.cn/gitlab/uav/uav-solar-panel.git
     ```
-    2. 获取前端代码：
-   
-    ```bash
-    git clone http://hcelab.honeywell.com.cn/gitlab/solar-panel-ui/web-app.git
-    ```
     3. 根据实际替换{}和相关内容，并保存在工作目录中，例如将{customerid}替换为linuo.
-    * <a href="/deploy/app_ctl.sh">app_ctl.sh</a>
-    * <a href="/deploy/{customerid}.yml">{customerid}.yml</a>
-    * <a href="/deploy/{customerid}.conf">{customerid}.conf</a>
+        * <a href="/deploy/app_ctl.sh">app_ctl.sh</a>
+        * <a href="/deploy/{customerid}.yml">{customerid}.yml</a>
+        * <a href="/deploy/{customerid}.conf">{customerid}.conf</a>
    
 将替换完成的{customerid}.conf文件移动到$NGINXDIR，即$ROOT/spi/conf/nginx目录中。
 
