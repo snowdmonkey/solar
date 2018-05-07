@@ -13,6 +13,7 @@ To use it, starts from repository root directory
     ```bash
     export PYTHONPATH=$(pwd)/backend/prototype
     ```
+    
 You can type
  
 ```bash
